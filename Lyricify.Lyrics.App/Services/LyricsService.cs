@@ -92,8 +92,10 @@ public class LyricsService
 
             if (result is null) return null;
 
-            var provider = await ProviderHelper.LRCLIBApi.GetById(
-                int.Parse(result.Id ?? "0"));
+            if (!int.TryParse(result.Id, out var trackId) || trackId <= 0)
+                return null;
+
+            var provider = await ProviderHelper.LRCLIBApi.GetById(trackId);
 
             if (provider is null) return null;
 

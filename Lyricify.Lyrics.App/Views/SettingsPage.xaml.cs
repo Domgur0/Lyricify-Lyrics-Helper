@@ -20,7 +20,7 @@ public partial class SettingsPage : ContentPage
 
     // ── Save all Spotify credentials ──────────────────────────────────────────
 
-    private void OnSaveCredentialsClicked(object sender, EventArgs e)
+    private async void OnSaveCredentialsClicked(object sender, EventArgs e)
     {
         var clientId = ClientIdEntry.Text?.Trim() ?? string.Empty;
         var clientSecret = ClientSecretEntry.Text?.Trim() ?? string.Empty;
@@ -29,7 +29,7 @@ public partial class SettingsPage : ContentPage
         // Validate Client ID (required).
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            DisplayAlert("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
+            await DisplayAlert("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
             return;
         }
 
@@ -51,7 +51,7 @@ public partial class SettingsPage : ContentPage
             Preferences.Remove(PrefSpDc);
         }
 
-        DisplayAlert("Saved", "Spotify credentials saved.", "OK");
+        await DisplayAlert("Saved", "Spotify credentials saved.", "OK");
     }
 
     // ── Sign out ──────────────────────────────────────────────────────────────
