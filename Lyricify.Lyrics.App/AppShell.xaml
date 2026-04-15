@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Lyricify.Lyrics.App.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Lyricify.Lyrics.App.Views"
+    Shell.FlyoutBehavior="Disabled"
+    BackgroundColor="{StaticResource PageBackground}">
+
+    <TabBar>
+        <ShellContent
+            Title="Lyrics"
+            ContentTemplate="{DataTemplate views:LyricsPage}"
+            Icon="music_note.png" />
+        <ShellContent
+            Title="Settings"
+            ContentTemplate="{DataTemplate views:SettingsPage}"
+            Icon="settings.png" />
+    </TabBar>
+</Shell>

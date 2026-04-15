@@ -1,0 +1,171 @@
+using Android.App;
+using Android.Content;
+using Android.Graphics.Drawables;
+using Android.OS;
+using Android.Views;
+using Lyricify.Lyrics.App.Services;
+using Lyricify.Lyrics.App.ViewModels;
+
+namespace Lyricify.Lyrics.App.Platforms.Android;
+
+/// <summary>
+/// A foreground <see cref="Service"/> that:
+/// <list type="bullet">
+///   <item>Keeps the Spotify polling and lyrics sync alive in the background.</item>
+///   <item>Draws a <see cref="LyricsOverlayView"/> over all other apps via <c>WindowManager</c>.</item>
+/// </list>
+/// Start via <see cref="Context.StartForegroundService"/>.
+/// Stop via <see cref="Context.StopService"/>.
+/// </summary>
+[Service(Exported = false)]
+public class LyricsOverlayService : Service
+{
+    private const string ChannelId = "lyricify_overlay";
+    private const int NotificationId = 1001;
+
+    private IWindowManager? _windowManager;
+    private LyricsOverlayView? _overlayView;
+    private LyricsViewModel? _viewModel;
+
+    // ── Service lifecycle ─────────────────────────────────────────────────────
+
+    public override void OnCreate()
+    {
+        base.OnCreate();
+
+        _windowManager = Application!.Context.GetSystemService(WindowService) as IWindowManager
+            ?? throw new InvalidOperationException("Cannot access WindowManager.");
+
+        // Resolve the shared ViewModel from the MAUI DI container.
+        _viewModel = IPlatformApplication.Current!.Services.GetRequiredService<LyricsViewModel>();
+
+        CreateNotificationChannel();
+        StartForeground(NotificationId, BuildNotification("Lyricify is running", "Tap to open"));
+
+        ShowOverlay();
+
+        // Subscribe to sync updates.
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
+        => StartCommandResult.Sticky;
+
+    public override IBinder? OnBind(Intent? intent) => null;
+
+    public override void OnDestroy()
+    {
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+
+        RemoveOverlay();
+        base.OnDestroy();
+    }
+
+    // ── Overlay management ────────────────────────────────────────────────────
+
+    private void ShowOverlay()
+    {
+        if (_overlayView is not null || _windowManager is null) return;
+
+        var ctx = Application!.Context;
+        _overlayView = new LyricsOverlayView(ctx);
+
+        var density = ctx.Resources!.DisplayMetrics!.Density;
+        var overlayWidthPx = (int)(360 * density);
+
+        var layoutParams = new WindowManagerLayoutParams(
+            overlayWidthPx,
+            ViewGroup.LayoutParams.WrapContent,
+            Build.VERSION.SdkInt >= BuildVersionCodes.O
+                ? WindowManagerTypes.ApplicationOverlay
+                : WindowManagerTypes.Phone,
+            WindowManagerFlags.NotFocusable | WindowManagerFlags.NotTouchModal,
+            global::Android.Graphics.Format.Translucent)
+        {
+            Gravity = GravityFlags.Top | GravityFlags.Start,
+            X = 0,
+            Y = (int)(80 * density),
+            Alpha = global::Microsoft.Maui.Storage.Preferences.Get("overlay_opacity", 0.9f),
+        };
+
+        _overlayView.SetWindowContext(_windowManager, layoutParams);
+        _windowManager.AddView(_overlayView, layoutParams);
+    }
+
+    private void RemoveOverlay()
+    {
+        if (_overlayView is null || _windowManager is null) return;
+        try
+        {
+            _windowManager.RemoveView(_overlayView);
+        }
+        catch
+        {
+            // View may have already been removed.
+        }
+        _overlayView = null;
+    }
+
+    // ── ViewModel events ──────────────────────────────────────────────────────
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_overlayView is null || _viewModel is null) return;
+
+        switch (e.PropertyName)
+        {
+            case nameof(LyricsViewModel.CurrentLineText):
+                _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
+                break;
+
+            case nameof(LyricsViewModel.LineProgress):
+                _overlayView.UpdateProgress(_viewModel.LineProgress);
+                break;
+
+            case nameof(LyricsViewModel.TrackTitle):
+                // Update notification with current track.
+                var notification = BuildNotification(
+                    _viewModel.TrackTitle,
+                    _viewModel.ArtistName);
+                var manager = GetSystemService(NotificationService) as NotificationManager;
+                manager?.Notify(NotificationId, notification);
+                break;
+        }
+    }
+
+    // ── Notification helpers ──────────────────────────────────────────────────
+
+    private void CreateNotificationChannel()
+    {
+        if (Build.VERSION.SdkInt < BuildVersionCodes.O) return;
+
+        var channel = new NotificationChannel(
+            ChannelId,
+            "Lyricify overlay",
+            NotificationImportance.Low)
+        {
+            Description = "Shown while the floating lyrics window is active",
+        };
+
+        var manager = GetSystemService(NotificationService) as NotificationManager;
+        manager?.CreateNotificationChannel(channel);
+    }
+
+    private Notification BuildNotification(string title, string text)
+    {
+        var pendingIntent = PendingIntent.GetActivity(
+            this,
+            0,
+            new Intent(this, typeof(MainActivity)),
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        return new Notification.Builder(this, ChannelId)
+            .SetContentTitle(title)
+            .SetContentText(text)
+            .SetSmallIcon(global::Android.Resource.Drawable.IcMediaPlay)
+            .SetContentIntent(pendingIntent)
+            .SetOngoing(true)
+            .Build()!;
+    }
+}
