@@ -11,13 +11,13 @@ namespace Lyricify.Lyrics.App.Services;
 public class SpotifyOAuthService
 {
     // ── Configuration ─────────────────────────────────────────────────────────
-    // Replace with your registered Spotify application credentials.
-    // Register at https://developer.spotify.com/dashboard.
-    // In a production build set this value via an MSBuild property or a build
-    // secrets manager so it is never hard-coded in version control.
-    private const string ClientId = "YOUR_SPOTIFY_CLIENT_ID";
-    private const string RedirectUri = "lyricify://oauth/callback";
+    // RedirectUri must exactly match the value registered in the Spotify dashboard.
+    // Client ID is stored in user Preferences so it can be entered in the Settings
+    // page at runtime — no rebuild required.
+    private const string RedirectUri = "http://localhost:766/callback";
     private const string Scopes = "user-read-playback-state";
+
+    private const string PrefClientId = "spotify_client_id";
 
     private const string AuthorizeUrl = "https://accounts.spotify.com/authorize";
     private const string TokenUrl = "https://accounts.spotify.com/api/token";
