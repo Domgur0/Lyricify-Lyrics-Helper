@@ -7,9 +7,6 @@ on:
     branches: [ "main", "master", "develop" ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   # ── Android APK ─────────────────────────────────────────────────────────────
   build-android:
@@ -18,31 +15,31 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Install MAUI Android workload
         run: dotnet workload install maui-android
 
       - name: Restore NuGet packages
-        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFramework=net8.0-android
+        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFramework=net10.0-android
 
       - name: Build Android APK (Release)
         run: >
           dotnet build "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
-          -p:TargetFramework=net8.0-android
+          -p:TargetFramework=net10.0-android
           -c Release
           -p:AndroidPackageFormat=apk
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lyricify-android-apk
-          path: Lyricify.Lyrics.App/bin/Release/net8.0-android/**/*.apk
+          path: Lyricify.Lyrics.App/bin/Release/net10.0-android/**/*.apk
           if-no-files-found: warn
 
   # ── iOS Simulator ────────────────────────────────────────────────────────────
@@ -52,31 +49,31 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Set up .NET 8
-        uses: actions/setup-dotnet@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Install MAUI iOS workload
         run: dotnet workload install maui-ios
 
       - name: Restore NuGet packages
-        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFramework=net8.0-ios
+        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFramework=net10.0-ios
 
       - name: Build iOS (Simulator, no signing)
         run: >
           dotnet build "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
-          -p:TargetFramework=net8.0-ios
+          -p:TargetFramework=net10.0-ios
           -c Release
           -p:RuntimeIdentifier=iossimulator-x64
           -p:CodesignKey=""
           -p:CodesignProvision=""
 
       - name: Upload iOS app artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lyricify-ios-simulator
-          path: Lyricify.Lyrics.App/bin/Release/net8.0-ios/**/*.app
+          path: Lyricify.Lyrics.App/bin/Release/net10.0-ios/**/*.app
           if-no-files-found: warn
