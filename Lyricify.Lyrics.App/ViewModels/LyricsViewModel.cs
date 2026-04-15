@@ -54,14 +54,21 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     private List<ILineInfo> _lyricLines = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNoLyricsHint))]
     private bool _isLoadingLyrics;
 
     /// <summary>
     /// True when lyrics were loaded for the current track.
-    /// Bound to the XAML "No lyrics available" hint visibility via a negation converter.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNoLyricsHint))]
     private bool _hasLyrics;
+
+    /// <summary>
+    /// True when no lyrics are available and we are not loading – shows the
+    /// "No lyrics available" hint in the UI.
+    /// </summary>
+    public bool ShowNoLyricsHint => !HasLyrics && !IsLoadingLyrics;
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
