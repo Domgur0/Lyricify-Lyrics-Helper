@@ -31,14 +31,22 @@ jobs:
           -f net10.0-android
           -c Release
           -p:SingleTargetFramework=net10.0-android
-          -p:AndroidPackageFormat=apk
+          -p:AndroidPackageFormats=apk
+
+      - name: List Android build output
+        if: always()
+        run: |
+          echo "=== Looking for APK/AAB files ==="
+          find Lyricify.Lyrics.App/bin -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No APK/AAB files found"
+          echo "=== Release output directory ==="
+          ls -laR Lyricify.Lyrics.App/bin/Release/net10.0-android/ 2>/dev/null | head -60 || echo "Directory not found"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: lyricify-android-apk
           path: Lyricify.Lyrics.App/bin/Release/net10.0-android/**/*.apk
-          if-no-files-found: warn
+          if-no-files-found: error
 
   # ── iOS Simulator ────────────────────────────────────────────────────────────
   build-ios:
@@ -71,12 +79,19 @@ jobs:
           -p:SingleTargetFramework=net10.0-ios
           -p:RuntimeIdentifier=iossimulator-arm64
           -p:buildForSimulator=true
-          -p:packageApp=false
           -p:ArchiveOnBuild=false
+
+      - name: List iOS build output
+        if: always()
+        run: |
+          echo "=== Looking for .app bundles ==="
+          find Lyricify.Lyrics.App/bin -name "*.app" -type d 2>/dev/null || echo "No .app bundles found"
+          echo "=== Release output directory ==="
+          ls -laR Lyricify.Lyrics.App/bin/Release/net10.0-ios/iossimulator-arm64/ 2>/dev/null | head -60 || echo "Directory not found"
 
       - name: Upload iOS app artifact
         uses: actions/upload-artifact@v7
         with:
           name: lyricify-ios-simulator
           path: Lyricify.Lyrics.App/bin/Release/net10.0-ios/iossimulator-arm64/**/*.app
-          if-no-files-found: warn
+          if-no-files-found: error
