@@ -101,48 +101,6 @@ namespace Lyricify.Lyrics.Providers.Web.Spotify
             return await SearchTrackCandidatesViaWebApi(song, artist, limit).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Fetches the currently playing track for the authenticated user.
-        /// Requires a valid OAuth2 access token obtained with the
-        /// <c>user-read-playback-state</c> scope via the Spotify Accounts service.
-        /// This token is <b>separate</b> from the sp_dc cookie used for lyrics.
-        /// </summary>
-        /// <param name="userOAuthToken">
-        /// A valid Spotify user OAuth2 Bearer token (e.g. obtained via PKCE flow).
-        /// </param>
-        /// <returns>
-        /// A <see cref="SpotifyCurrentlyPlayingResponse"/> when the player is active,
-        /// or <c>null</c> when the player is idle (HTTP 204 No Content).
-        /// </returns>
-        public async Task<SpotifyCurrentlyPlayingResponse?> GetCurrentlyPlayingAsync(string userOAuthToken)
-        {
-            if (string.IsNullOrWhiteSpace(userOAuthToken))
-                throw new ArgumentNullException(nameof(userOAuthToken), "User OAuth2 token must not be empty.");
-
-            const string url = "https://api.spotify.com/v1/me/player/currently-playing?additional_types=track";
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.TryAddWithoutValidation("User-Agent", SpotifyUserAgent);
-            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {userOAuthToken}");
-
-            using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-
-            // 204 means the player is not active – no body to parse.
-            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-                return null;
-
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
-                || response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-            {
-                throw new UnauthorizedAccessException("Spotify user OAuth2 token is invalid or expired.");
-            }
-
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(json)) return null;
-            return JsonConvert.DeserializeObject<SpotifyCurrentlyPlayingResponse>(json);
-        }
-
         public async Task<string> GetLyrics(string trackId)
         {
             var url =
