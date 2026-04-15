@@ -59,9 +59,14 @@ jobs:
 
       - name: Set Xcode version
         run: |
-          XCODE_ROOT=/Applications/Xcode_26.2.app
+          # Find the latest Xcode version installed on the runner
+          XCODE_ROOT=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_ROOT" ]; then
+            XCODE_ROOT=$(xcode-select -p | sed 's|/Contents/Developer||')
+          fi
+          echo "Using Xcode at $XCODE_ROOT"
           echo "MD_APPLE_SDK_ROOT=$XCODE_ROOT" >> $GITHUB_ENV
-          sudo xcode-select -s $XCODE_ROOT
+          sudo xcode-select -s "$XCODE_ROOT"
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v5
