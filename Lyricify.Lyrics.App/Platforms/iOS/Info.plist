@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App display name -->
+    <key>CFBundleDisplayName</key>
+    <string>Lyricify</string>
+
+    <!-- Bundle identifier – must match ApplicationId in csproj -->
+    <key>CFBundleIdentifier</key>
+    <string>com.lyricify.lyrics.app</string>
+
+    <!-- Version info -->
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <!-- Minimum iOS version -->
+    <key>MinimumOSVersion</key>
+    <string>15.0</string>
+
+    <!-- Redirect URI: http://localhost:766/callback
+         MAUI WebAuthenticator handles this via a local loopback server.
+         No custom URL scheme registration is needed for localhost redirects. -->
+
+    <!-- Allow outbound HTTPS and the localhost redirect (Spotify API, LRCLIB) -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>api.spotify.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+            <key>lrclib.net</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <false/>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+            <!-- Allow plain HTTP to localhost so WebAuthenticator can receive
+                 the OAuth2 callback on http://localhost:766/callback. -->
+            <key>localhost</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
+
+    <!-- Network usage description (shown in system permission prompt) -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Lyricify connects to Spotify and lyrics providers to fetch lyrics for your currently playing track.</string>
+</dict>
+</plist>

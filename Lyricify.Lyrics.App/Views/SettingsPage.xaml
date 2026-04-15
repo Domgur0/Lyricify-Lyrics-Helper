@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Lyricify.Lyrics.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Settings"
+    BackgroundColor="{StaticResource PageBackground}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- ── Spotify credentials ────────────────────────────────────── -->
+            <Label Text="Spotify" TextColor="White" FontSize="18" FontAttributes="Bold" />
+
+            <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
+                <VerticalStackLayout Spacing="12">
+
+                    <!-- Client ID -->
+                    <Label Text="Client ID" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+                    <Entry
+                        x:Name="ClientIdEntry"
+                        Placeholder="Enter your Spotify Client ID"
+                        PlaceholderColor="#666666"
+                        TextColor="White"
+                        BackgroundColor="Transparent" />
+
+                    <!-- Client Secret -->
+                    <Label Text="Client Secret" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+                    <Entry
+                        x:Name="ClientSecretEntry"
+                        Placeholder="Enter your Spotify Client Secret"
+                        PlaceholderColor="#666666"
+                        TextColor="White"
+                        BackgroundColor="Transparent"
+                        IsPassword="true" />
+
+                    <Label
+                        Text="Find these values in your app at developer.spotify.com/dashboard.&#x0a;Redirect URI must be set to http://localhost:766/callback."
+                        TextColor="#888888"
+                        FontSize="11"
+                        HorizontalTextAlignment="Center" />
+
+                    <!-- sp_dc cookie -->
+                    <Label Text="sp_dc cookie (optional)" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+                    <Entry
+                        x:Name="SpDcEntry"
+                        Placeholder="Paste your sp_dc cookie"
+                        PlaceholderColor="#666666"
+                        TextColor="White"
+                        BackgroundColor="Transparent"
+                        IsPassword="true" />
+                    <Label
+                        Text="Used to fetch Spotify's own lyrics. Not required — LRCLIB is used as fallback."
+                        TextColor="#888888"
+                        FontSize="11"
+                        HorizontalTextAlignment="Center" />
+
+                    <Button
+                        Text="Save Credentials"
+                        BackgroundColor="{StaticResource ActiveLineColor}"
+                        TextColor="Black"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnSaveCredentialsClicked" />
+
+                    <Button
+                        Text="Sign out of Spotify"
+                        BackgroundColor="#333333"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnSignOutClicked" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- ── Display ───────────────────────────────────────────────── -->
+            <Label Text="Display" TextColor="White" FontSize="18" FontAttributes="Bold" />
+
+            <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Font size" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+                    <Slider
+                        x:Name="FontSizeSlider"
+                        Minimum="12"
+                        Maximum="32"
+                        Value="17"
+                        ThumbColor="{StaticResource ActiveLineColor}"
+                        MinimumTrackColor="{StaticResource ActiveLineColor}"
+                        ValueChanged="OnFontSizeChanged" />
+                    <Label
+                        x:Name="FontSizeLabel"
+                        Text="17"
+                        TextColor="{StaticResource InactiveLineColor}"
+                        HorizontalOptions="End"
+                        FontSize="13" />
+
+                    <!-- Android-only: overlay opacity -->
+                    <Label
+                        Text="Overlay opacity"
+                        TextColor="{StaticResource InactiveLineColor}"
+                        FontSize="13"
+                        IsVisible="{OnPlatform Default=False, Android=True}" />
+                    <Slider
+                        x:Name="OpacitySlider"
+                        Minimum="0.3"
+                        Maximum="1.0"
+                        Value="0.9"
+                        ThumbColor="{StaticResource ActiveLineColor}"
+                        MinimumTrackColor="{StaticResource ActiveLineColor}"
+                        ValueChanged="OnOverlayOpacityChanged"
+                        IsVisible="{OnPlatform Default=False, Android=True}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- ── About ─────────────────────────────────────────────────── -->
+            <Label Text="About" TextColor="White" FontSize="18" FontAttributes="Bold" />
+            <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Lyricify 1.0.0" TextColor="White" FontSize="14" />
+                    <Label Text="Powered by Lyricify Lyrics Helper" TextColor="{StaticResource InactiveLineColor}" FontSize="12" />
+                    <Label Text="Lyrics provided by Spotify and LRCLIB" TextColor="{StaticResource InactiveLineColor}" FontSize="12" />
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

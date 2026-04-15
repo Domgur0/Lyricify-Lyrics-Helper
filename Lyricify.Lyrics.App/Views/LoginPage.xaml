@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Lyricify.Lyrics.App.Views.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Sign in"
+    BackgroundColor="{StaticResource PageBackground}">
+
+    <VerticalStackLayout
+        Padding="40"
+        Spacing="24"
+        VerticalOptions="Center">
+
+        <!-- Logo / branding -->
+        <Label
+            FontSize="36"
+            HorizontalOptions="Center"
+            Text="🎵 Lyricify"
+            TextColor="{StaticResource ActiveLineColor}" />
+
+        <Label
+            FontSize="16"
+            HorizontalOptions="Center"
+            Text="Sign in with Spotify to see lyrics for your currently playing track."
+            TextColor="{StaticResource InactiveLineColor}"
+            HorizontalTextAlignment="Center" />
+
+        <!-- Client ID missing notice (shown when not yet configured) -->
+        <Frame
+            x:Name="CredentialsMissingFrame"
+            BackgroundColor="#1A1A1A"
+            BorderColor="#FF5555"
+            CornerRadius="8"
+            Padding="16"
+            IsVisible="False">
+            <VerticalStackLayout Spacing="8">
+                <Label
+                    Text="⚠️ Spotify credentials not configured"
+                    TextColor="#FF5555"
+                    FontSize="14"
+                    FontAttributes="Bold"
+                    HorizontalTextAlignment="Center" />
+                <Label
+                    Text="Please enter your Client ID and Client Secret in Settings before signing in."
+                    TextColor="{StaticResource InactiveLineColor}"
+                    FontSize="13"
+                    HorizontalTextAlignment="Center" />
+                <Button
+                    Text="Open Settings"
+                    BackgroundColor="#333333"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="40"
+                    Clicked="OnOpenSettingsClicked" />
+            </VerticalStackLayout>
+        </Frame>
+
+        <!-- Login button -->
+        <Button
+            x:Name="LoginButton"
+            Text="Connect Spotify"
+            BackgroundColor="{StaticResource ActiveLineColor}"
+            TextColor="Black"
+            FontAttributes="Bold"
+            CornerRadius="24"
+            HeightRequest="52"
+            Clicked="OnLoginClicked" />
+
+        <!-- Status label -->
+        <Label
+            x:Name="StatusLabel"
+            Text=""
+            TextColor="#FF5555"
+            HorizontalOptions="Center"
+            IsVisible="False" />
+
+        <!-- Activity indicator -->
+        <ActivityIndicator
+            x:Name="Spinner"
+            IsRunning="False"
+            IsVisible="False"
+            Color="{StaticResource ActiveLineColor}" />
+    </VerticalStackLayout>
+</ContentPage>
