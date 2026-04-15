@@ -30,6 +30,7 @@ jobs:
           dotnet publish "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
           -f net10.0-android
           -c Release
+          -p:SingleTargetFramework=net10.0-android
           -p:AndroidPackageFormat=apk
 
       - name: Upload APK artifact
@@ -61,6 +62,7 @@ jobs:
           dotnet build "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
           -f net10.0-ios
           -c Release
+          -p:SingleTargetFramework=net10.0-ios
           -p:RuntimeIdentifier=iossimulator-x64
           -p:CodesignKey=""
           -p:CodesignProvision=""
