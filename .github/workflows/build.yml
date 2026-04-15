@@ -43,11 +43,17 @@ jobs:
   # ── iOS Simulator ────────────────────────────────────────────────────────────
   build-ios:
     name: iOS (Simulator)
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Set Xcode version
+        run: |
+          XCODE_ROOT=/Applications/Xcode_26.2.app
+          echo "MD_APPLE_SDK_ROOT=$XCODE_ROOT" >> $GITHUB_ENV
+          sudo xcode-select -s $XCODE_ROOT
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v5
@@ -63,13 +69,14 @@ jobs:
           -f net10.0-ios
           -c Release
           -p:SingleTargetFramework=net10.0-ios
-          -p:RuntimeIdentifier=iossimulator-x64
-          -p:CodesignKey=""
-          -p:CodesignProvision=""
+          -p:RuntimeIdentifier=iossimulator-arm64
+          -p:buildForSimulator=true
+          -p:packageApp=false
+          -p:ArchiveOnBuild=false
 
       - name: Upload iOS app artifact
         uses: actions/upload-artifact@v7
         with:
           name: lyricify-ios-simulator
-          path: Lyricify.Lyrics.App/bin/Release/net10.0-ios/iossimulator-x64/**/*.app
+          path: Lyricify.Lyrics.App/bin/Release/net10.0-ios/iossimulator-arm64/**/*.app
           if-no-files-found: warn
