@@ -25,13 +25,13 @@ internal sealed class LyricsOverlayView : LinearLayout
     private IWindowManager? _windowManager;
 
     // Colours
-    private static readonly Color ActiveColor = Color.ParseColor("#1DB954");   // Spotify green
-    private static readonly Color DimColor = Color.ParseColor("#B3FFFFFF");    // semi-transparent white
+    private static readonly Android.Graphics.Color ActiveColor = Android.Graphics.Color.ParseColor("#1DB954");   // Spotify green
+    private static readonly Android.Graphics.Color DimColor = Android.Graphics.Color.ParseColor("#B3FFFFFF");    // semi-transparent white
 
     public LyricsOverlayView(Context context) : base(context)
     {
         Orientation = Orientation.Vertical;
-        SetBackgroundColor(Color.ParseColor("#CC000000")); // semi-transparent black
+        SetBackgroundColor(Android.Graphics.Color.ParseColor("#CC000000")); // semi-transparent black
 
         var padding = (int)(12 * Resources!.DisplayMetrics!.Density);
         var cornerRadius = (int)(8 * Resources.DisplayMetrics.Density);
@@ -91,7 +91,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         }
 
         var alpha = (int)(0x66 + (0xFF - 0x66) * lineProgress);
-        var blended = Color.Argb(alpha, ActiveColor.R, ActiveColor.G, ActiveColor.B);
+        var blended = Android.Graphics.Color.Argb(alpha, ActiveColor.R, ActiveColor.G, ActiveColor.B);
         _currentLineView.SetTextColor(blended);
     }
 

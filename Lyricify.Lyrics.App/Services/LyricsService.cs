@@ -90,12 +90,12 @@ public class LyricsService
                 Searchers.Searchers.LRCLIB,
                 CompareHelper.MatchType.Medium);
 
-            if (result is null) return null;
+            if (result is not LRCLIBSearchResult lrclibResult) return null;
 
-            if (!int.TryParse(result.Id, out var trackId) || trackId <= 0)
+            if (lrclibResult.Id <= 0)
                 return null;
 
-            var provider = await ProviderHelper.LRCLIBApi.GetById(trackId);
+            var provider = await ProviderHelper.LRCLIBApi.GetById(lrclibResult.Id);
 
             if (provider is null) return null;
 
