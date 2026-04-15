@@ -87,6 +87,9 @@ public partial class LyricsPage : ContentPage
 #if ANDROID
     private bool _overlayRunning;
 
+    private const string OverlayButtonTextShow = "🪟  Show floating lyrics";
+    private const string OverlayButtonTextHide = "🪟  Hide floating lyrics";
+
     private void ToggleAndroidOverlay()
     {
         var context = Platform.CurrentActivity
@@ -107,14 +110,14 @@ public partial class LyricsPage : ContentPage
             var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
             context.StartForegroundService(serviceIntent);
             _overlayRunning = true;
-            (sender as Button)!.Text = "🪟  Hide floating lyrics";
+            (sender as Button)!.Text = OverlayButtonTextHide;
         }
         else
         {
             var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
             context.StopService(serviceIntent);
             _overlayRunning = false;
-            (sender as Button)!.Text = "🪟  Show floating lyrics";
+            (sender as Button)!.Text = OverlayButtonTextShow;
         }
     }
 #endif
