@@ -22,7 +22,7 @@ public class MainActivity : MauiAppCompatActivity
         base.OnCreate(savedInstanceState);
 
         // Request notification permission (Android 13+).
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+        if (OperatingSystem.IsAndroidVersionAtLeast(33))
         {
             RequestPermissions(
                 new[] { Android.Manifest.Permission.PostNotifications },

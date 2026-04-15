@@ -4,6 +4,8 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Lyricify.Lyrics.App.ViewModels"
+    xmlns:models="clr-namespace:Lyricify.Lyrics.Models;assembly=Lyricify.Lyrics.Helper"
+    x:DataType="vm:LyricsViewModel"
     Title="Now Playing"
     BackgroundColor="{StaticResource PageBackground}">
 
@@ -70,7 +72,7 @@
             SelectionMode="None">
 
             <CollectionView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="models:ILineInfo">
                     <!-- Each row is a lyric line.  The active line uses a larger, coloured label. -->
                     <Label
                         x:Name="LineLabel"
