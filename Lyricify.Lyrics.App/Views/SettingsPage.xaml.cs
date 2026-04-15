@@ -7,23 +7,51 @@ public partial class SettingsPage : ContentPage
 {
     private readonly SpotifyOAuthService _oauthService;
 
+    // Preference keys (must match those in SpotifyOAuthService)
+    private const string PrefClientId = "spotify_client_id";
+    private const string PrefClientSecret = "spotify_client_secret";
+    private const string PrefSpDc = "spotify_sp_dc";
+
     public SettingsPage()
     {
         InitializeComponent();
         _oauthService = IPlatformApplication.Current!.Services.GetRequiredService<SpotifyOAuthService>();
     }
 
-    // ── sp_dc ─────────────────────────────────────────────────────────────────
+    // ── Save all Spotify credentials ──────────────────────────────────────────
 
-    private void OnSaveSpDcClicked(object sender, EventArgs e)
+    private void OnSaveCredentialsClicked(object sender, EventArgs e)
     {
-        var spDc = SpDcEntry.Text?.Trim();
-        ProviderHelper.SpotifyApi.SetSpDc(spDc);
+        var clientId = ClientIdEntry.Text?.Trim() ?? string.Empty;
+        var clientSecret = ClientSecretEntry.Text?.Trim() ?? string.Empty;
+        var spDc = SpDcEntry.Text?.Trim() ?? string.Empty;
+
+        // Validate Client ID (required).
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            DisplayAlert("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
+            return;
+        }
+
+        // Persist credentials.
+        Preferences.Set(PrefClientId, clientId);
+
+        if (!string.IsNullOrWhiteSpace(clientSecret))
+            Preferences.Set(PrefClientSecret, clientSecret);
+        else
+            Preferences.Remove(PrefClientSecret);
 
         if (!string.IsNullOrWhiteSpace(spDc))
-            Preferences.Set("spotify_sp_dc", spDc);
+        {
+            Preferences.Set(PrefSpDc, spDc);
+            ProviderHelper.SpotifyApi.SetSpDc(spDc);
+        }
+        else
+        {
+            Preferences.Remove(PrefSpDc);
+        }
 
-        DisplayAlert("Saved", "sp_dc cookie saved.", "OK");
+        DisplayAlert("Saved", "Spotify credentials saved.", "OK");
     }
 
     // ── Sign out ──────────────────────────────────────────────────────────────
@@ -58,14 +86,16 @@ public partial class SettingsPage : ContentPage
         base.OnAppearing();
 
         // Restore persisted settings.
+        ClientIdEntry.Text = Preferences.Get(PrefClientId, string.Empty);
+        ClientSecretEntry.Text = Preferences.Get(PrefClientSecret, string.Empty);
+        SpDcEntry.Text = Preferences.Get(PrefSpDc, string.Empty);
+
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
 
-        var spDc = Preferences.Get("spotify_sp_dc", string.Empty);
+        // Re-apply sp_dc to the provider in case the app was restarted.
+        var spDc = Preferences.Get(PrefSpDc, string.Empty);
         if (!string.IsNullOrWhiteSpace(spDc))
-        {
-            SpDcEntry.Text = spDc;
             ProviderHelper.SpotifyApi.SetSpDc(spDc);
-        }
     }
 }

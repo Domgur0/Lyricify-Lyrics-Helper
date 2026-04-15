@@ -11,9 +11,13 @@ public class AppDelegate : MauiUIApplicationDelegate
     // ── Spotify OAuth2 callback ───────────────────────────────────────────────
 
     /// <summary>
-    /// Intercepts the Spotify OAuth2 redirect URI (<c>lyricify://oauth/callback</c>)
-    /// and forwards it to <see cref="WebAuthenticator"/> so the PKCE flow can complete.
-    /// Register this custom scheme in Info.plist under CFBundleURLTypes.
+    /// MAUI's <see cref="WebAuthenticator"/> intercepts the Spotify OAuth2 redirect
+    /// (<c>http://localhost:766/callback</c>) via a local loopback listener — no custom
+    /// URL scheme is required for localhost redirects on iOS.
+    ///
+    /// This override is retained as a safety net: if the system ever routes an
+    /// <c>http://localhost</c> URL through <c>openURL</c> it will be forwarded to
+    /// <see cref="WebAuthenticator"/> correctly.
     /// </summary>
     public override bool OpenUrl(UIApplication application, NSUrl url, NSDictionary options)
     {

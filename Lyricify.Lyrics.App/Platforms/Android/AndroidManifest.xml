@@ -22,17 +22,9 @@
         android:supportsRtl="true"
         android:label="Lyricify">
 
-        <!-- Spotify OAuth2 redirect URI handler -->
-        <activity
-            android:name="com.microsoft.identity.client.BrowserTabActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="lyricify" android:host="oauth" android:path="/callback" />
-            </intent-filter>
-        </activity>
+        <!-- Spotify OAuth2 redirect URI handler for http://localhost:766/callback.
+             MAUI WebAuthenticator intercepts this via a local loopback listener;
+             no additional Android intent-filter is needed for localhost redirects. -->
 
         <!-- Floating lyrics foreground service -->
         <service

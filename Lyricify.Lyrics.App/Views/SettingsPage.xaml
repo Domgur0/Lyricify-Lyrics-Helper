@@ -14,7 +14,34 @@
 
             <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="sp_dc cookie" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+
+                    <!-- Client ID -->
+                    <Label Text="Client ID" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+                    <Entry
+                        x:Name="ClientIdEntry"
+                        Placeholder="Enter your Spotify Client ID"
+                        PlaceholderColor="#666666"
+                        TextColor="White"
+                        BackgroundColor="Transparent" />
+
+                    <!-- Client Secret -->
+                    <Label Text="Client Secret" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
+                    <Entry
+                        x:Name="ClientSecretEntry"
+                        Placeholder="Enter your Spotify Client Secret"
+                        PlaceholderColor="#666666"
+                        TextColor="White"
+                        BackgroundColor="Transparent"
+                        IsPassword="true" />
+
+                    <Label
+                        Text="Find these values in your app at developer.spotify.com/dashboard.&#x0a;Redirect URI must be set to http://localhost:766/callback."
+                        TextColor="#888888"
+                        FontSize="11"
+                        HorizontalTextAlignment="Center" />
+
+                    <!-- sp_dc cookie -->
+                    <Label Text="sp_dc cookie (optional)" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
                     <Entry
                         x:Name="SpDcEntry"
                         Placeholder="Paste your sp_dc cookie"
@@ -22,13 +49,19 @@
                         TextColor="White"
                         BackgroundColor="Transparent"
                         IsPassword="true" />
+                    <Label
+                        Text="Used to fetch Spotify's own lyrics. Not required — LRCLIB is used as fallback."
+                        TextColor="#888888"
+                        FontSize="11"
+                        HorizontalTextAlignment="Center" />
+
                     <Button
-                        Text="Save"
+                        Text="Save Credentials"
                         BackgroundColor="{StaticResource ActiveLineColor}"
                         TextColor="Black"
                         CornerRadius="8"
                         HeightRequest="40"
-                        Clicked="OnSaveSpDcClicked" />
+                        Clicked="OnSaveCredentialsClicked" />
 
                     <Button
                         Text="Sign out of Spotify"

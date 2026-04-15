@@ -25,29 +25,33 @@
             TextColor="{StaticResource InactiveLineColor}"
             HorizontalTextAlignment="Center" />
 
-        <!-- Optional: sp_dc cookie for Spotify's internal lyrics endpoint -->
+        <!-- Client ID missing notice (shown when not yet configured) -->
         <Frame
+            x:Name="CredentialsMissingFrame"
             BackgroundColor="#1A1A1A"
-            BorderColor="#333333"
+            BorderColor="#FF5555"
             CornerRadius="8"
-            Padding="16">
+            Padding="16"
+            IsVisible="False">
             <VerticalStackLayout Spacing="8">
                 <Label
-                    Text="Spotify sp_dc cookie (optional)"
-                    TextColor="{StaticResource InactiveLineColor}"
-                    FontSize="13" />
-                <Entry
-                    x:Name="SpDcEntry"
-                    Placeholder="Paste your sp_dc cookie here for better lyrics"
-                    PlaceholderColor="#666666"
-                    TextColor="White"
-                    BackgroundColor="Transparent"
-                    IsPassword="true" />
-                <Label
-                    Text="Used only to fetch Spotify's own lyrics.  Not required — LRCLIB will be used as fallback."
-                    TextColor="#888888"
-                    FontSize="11"
+                    Text="⚠️ Spotify credentials not configured"
+                    TextColor="#FF5555"
+                    FontSize="14"
+                    FontAttributes="Bold"
                     HorizontalTextAlignment="Center" />
+                <Label
+                    Text="Please enter your Client ID and Client Secret in Settings before signing in."
+                    TextColor="{StaticResource InactiveLineColor}"
+                    FontSize="13"
+                    HorizontalTextAlignment="Center" />
+                <Button
+                    Text="Open Settings"
+                    BackgroundColor="#333333"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="40"
+                    Clicked="OnOpenSettingsClicked" />
             </VerticalStackLayout>
         </Frame>
 
