@@ -32,7 +32,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 
     <!-- JSON parsing (same version as the library) -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
