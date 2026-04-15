@@ -8,6 +8,15 @@ public partial class LyricsPage : ContentPage
     private readonly LyricsViewModel _viewModel;
     private int _lastScrolledLineIndex = -1;
 
+    /// <summary>
+    /// Parameterless constructor used by MAUI Shell <c>DataTemplate</c> resolution.
+    /// Resolves <see cref="LyricsViewModel"/> from the DI container.
+    /// </summary>
+    public LyricsPage()
+        : this(IPlatformApplication.Current!.Services.GetRequiredService<LyricsViewModel>())
+    {
+    }
+
     public LyricsPage(LyricsViewModel viewModel)
     {
         InitializeComponent();
