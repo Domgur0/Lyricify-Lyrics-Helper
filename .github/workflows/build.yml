@@ -31,9 +31,10 @@ jobs:
       - name: Build Android APK (Release)
         run: >
           dotnet publish "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
-          -p:TargetFrameworks=net10.0-android
+          -f net10.0-android
           -c Release
           -p:AndroidPackageFormat=apk
+          --no-restore
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
@@ -65,11 +66,12 @@ jobs:
       - name: Build iOS (Simulator, no signing)
         run: >
           dotnet publish "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
-          -p:TargetFrameworks=net10.0-ios
+          -f net10.0-ios
           -c Release
           -p:RuntimeIdentifier=iossimulator-x64
           -p:CodesignKey=""
           -p:CodesignProvision=""
+          --no-restore
 
       - name: Upload iOS app artifact
         uses: actions/upload-artifact@v7
