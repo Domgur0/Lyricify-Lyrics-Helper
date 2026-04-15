@@ -55,6 +55,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowNoLyricsHint))]
+    [NotifyPropertyChangedFor(nameof(ShowNotPlayingHint))]
     private bool _isLoadingLyrics;
 
     /// <summary>
@@ -65,10 +66,23 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     private bool _hasLyrics;
 
     /// <summary>
-    /// True when no lyrics are available and we are not loading – shows the
+    /// True when a track has been loaded (even if lyrics haven't been found yet).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNoLyricsHint))]
+    [NotifyPropertyChangedFor(nameof(ShowNotPlayingHint))]
+    private bool _isTrackLoaded;
+
+    /// <summary>
+    /// True when no track is playing – shows the "waiting for playback" hint.
+    /// </summary>
+    public bool ShowNotPlayingHint => !IsTrackLoaded && !IsLoadingLyrics;
+
+    /// <summary>
+    /// True when a track is playing but no lyrics are available – shows the
     /// "No lyrics available" hint in the UI.
     /// </summary>
-    public bool ShowNoLyricsHint => !HasLyrics && !IsLoadingLyrics;
+    public bool ShowNoLyricsHint => IsTrackLoaded && !HasLyrics && !IsLoadingLyrics;
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -116,10 +130,12 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
             AlbumArtUrl = string.Empty;
             LyricLines = new();
             HasLyrics = false;
+            IsTrackLoaded = false;
             _syncService.SetLyrics(null);
             return;
         }
 
+        IsTrackLoaded = true;
         TrackTitle = item.Name ?? string.Empty;
         ArtistName = string.Join(", ", item.Artists?.Select(a => a.Name).Where(n => !string.IsNullOrWhiteSpace(n))
             ?? Enumerable.Empty<string>());

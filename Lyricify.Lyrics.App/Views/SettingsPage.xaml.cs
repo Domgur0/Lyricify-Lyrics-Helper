@@ -29,7 +29,7 @@ public partial class SettingsPage : ContentPage
         // Validate Client ID (required).
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            await DisplayAlertAsync("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
+            await DisplayAlert("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
             return;
         }
 
@@ -51,14 +51,14 @@ public partial class SettingsPage : ContentPage
             Preferences.Remove(PrefSpDc);
         }
 
-        await DisplayAlertAsync("Saved", "Spotify credentials saved.", "OK");
+        await DisplayAlert("Saved", "Spotify credentials saved.", "OK");
     }
 
     // ── Sign out ──────────────────────────────────────────────────────────────
 
     private async void OnSignOutClicked(object sender, EventArgs e)
     {
-        var confirm = await DisplayAlertAsync("Sign out", "Sign out of Spotify?", "Yes", "No");
+        var confirm = await DisplayAlert("Sign out", "Sign out of Spotify?", "Yes", "No");
         if (!confirm) return;
 
         _oauthService.SignOut();
