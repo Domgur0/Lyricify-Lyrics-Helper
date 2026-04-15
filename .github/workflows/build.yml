@@ -26,12 +26,12 @@ jobs:
         run: dotnet workload install maui-android
 
       - name: Restore NuGet packages
-        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFramework=net10.0-android
+        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFrameworks=net10.0-android
 
       - name: Build Android APK (Release)
         run: >
-          dotnet build "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
-          -p:TargetFramework=net10.0-android
+          dotnet publish "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
+          -p:TargetFrameworks=net10.0-android
           -c Release
           -p:AndroidPackageFormat=apk
 
@@ -60,12 +60,12 @@ jobs:
         run: dotnet workload install maui-ios
 
       - name: Restore NuGet packages
-        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFramework=net10.0-ios
+        run: dotnet restore "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj" -p:TargetFrameworks=net10.0-ios
 
       - name: Build iOS (Simulator, no signing)
         run: >
-          dotnet build "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
-          -p:TargetFramework=net10.0-ios
+          dotnet publish "Lyricify.Lyrics.App/Lyricify.Lyrics.App.csproj"
+          -p:TargetFrameworks=net10.0-ios
           -c Release
           -p:RuntimeIdentifier=iossimulator-x64
           -p:CodesignKey=""
