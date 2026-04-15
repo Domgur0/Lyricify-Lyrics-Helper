@@ -11,10 +11,15 @@ public partial class App : Application
     {
         InitializeComponent();
         _oauthService = oauthService;
+    }
 
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
         // Navigate to login if we have no stored token, otherwise go straight to lyrics.
-        MainPage = _oauthService.HasValidToken
-            ? new AppShell()
+        var page = _oauthService.HasValidToken
+            ? (Page)new AppShell()
             : new NavigationPage(new LoginPage());
+
+        return new Window(page);
     }
 }

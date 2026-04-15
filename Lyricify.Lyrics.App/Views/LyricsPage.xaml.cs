@@ -80,7 +80,7 @@ public partial class LyricsPage : ContentPage
     private void OnToggleOverlayClicked(object sender, EventArgs e)
     {
 #if ANDROID
-        ToggleAndroidOverlay();
+        ToggleAndroidOverlay(sender);
 #endif
     }
 
@@ -90,7 +90,8 @@ public partial class LyricsPage : ContentPage
     private const string OverlayButtonTextShow = "🪟  Show floating lyrics";
     private const string OverlayButtonTextHide = "🪟  Hide floating lyrics";
 
-    private void ToggleAndroidOverlay()
+#pragma warning disable CA1416 // Validate platform compatibility
+    private void ToggleAndroidOverlay(object sender)
     {
         var context = Platform.CurrentActivity
             ?? throw new InvalidOperationException("No current Android activity.");
@@ -120,5 +121,6 @@ public partial class LyricsPage : ContentPage
             (sender as Button)!.Text = OverlayButtonTextShow;
         }
     }
+#pragma warning restore CA1416
 #endif
 }

@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Graphics;
+using Android.OS;
 using Android.Views;
 using Android.Widget;
 using Lyricify.Lyrics.Models;
@@ -7,7 +8,7 @@ using Lyricify.Lyrics.Models;
 namespace Lyricify.Lyrics.App.Platforms.Android;
 
 /// <summary>
-/// A lightweight <see cref="View"/> drawn directly by <see cref="WindowManager"/>.
+/// A lightweight Android view drawn directly by <see cref="WindowManager"/>.
 /// Shows the active lyric line (large, highlighted) and the next line (smaller, dim).
 /// Supports drag-to-reposition via touch events.
 /// </summary>

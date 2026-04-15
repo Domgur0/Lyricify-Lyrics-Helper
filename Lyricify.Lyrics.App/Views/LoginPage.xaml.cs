@@ -40,7 +40,7 @@ public partial class LoginPage : ContentPage
             await _oauthService.AuthorizeAsync();
 
             // Authorization succeeded – switch to the main shell.
-            Application.Current!.MainPage = new AppShell();
+            Application.Current!.Windows[0].Page = new AppShell();
         }
         catch (TaskCanceledException)
         {

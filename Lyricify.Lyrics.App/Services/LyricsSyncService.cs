@@ -6,7 +6,7 @@ namespace Lyricify.Lyrics.App.Services;
 /// <summary>
 /// Drives real-time lyric synchronization.
 /// <list type="bullet">
-///   <item>Runs a 100 ms timer and calls <see cref="SyncHelper.GetSyncResult"/> on each tick.</item>
+///   <item>Runs a 100 ms timer and calls <see cref="SyncHelper.GetSyncResult(LyricsData, int)"/> on each tick.</item>
 ///   <item>Estimates the current playback position locally to avoid hammering the Spotify API.</item>
 ///   <item>Raises <see cref="SyncResultUpdated"/> for UI consumers (ViewModels, overlay views).</item>
 /// </list>

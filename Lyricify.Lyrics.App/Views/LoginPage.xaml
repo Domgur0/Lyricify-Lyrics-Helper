@@ -26,11 +26,11 @@
             HorizontalTextAlignment="Center" />
 
         <!-- Client ID missing notice (shown when not yet configured) -->
-        <Frame
+        <Border
             x:Name="CredentialsMissingFrame"
             BackgroundColor="#1A1A1A"
-            BorderColor="#FF5555"
-            CornerRadius="8"
+            Stroke="#FF5555"
+            StrokeShape="RoundRectangle 8,8,8,8"
             Padding="16"
             IsVisible="False">
             <VerticalStackLayout Spacing="8">
@@ -53,7 +53,7 @@
                     HeightRequest="40"
                     Clicked="OnOpenSettingsClicked" />
             </VerticalStackLayout>
-        </Frame>
+        </Border>
 
         <!-- Login button -->
         <Button

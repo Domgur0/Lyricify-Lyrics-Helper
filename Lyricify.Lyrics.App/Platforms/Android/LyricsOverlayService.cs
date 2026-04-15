@@ -33,7 +33,7 @@ public class LyricsOverlayService : Service
     {
         base.OnCreate();
 
-        _windowManager = Application!.Context.GetSystemService(WindowService) as IWindowManager
+        _windowManager = global::Android.App.Application.Context.GetSystemService(WindowService) as IWindowManager
             ?? throw new InvalidOperationException("Cannot access WindowManager.");
 
         // Resolve the shared ViewModel from the MAUI DI container.
@@ -68,7 +68,7 @@ public class LyricsOverlayService : Service
     {
         if (_overlayView is not null || _windowManager is null) return;
 
-        var ctx = Application!.Context;
+        var ctx = global::Android.App.Application.Context;
         _overlayView = new LyricsOverlayView(ctx);
 
         var density = ctx.Resources!.DisplayMetrics!.Density;
@@ -77,7 +77,7 @@ public class LyricsOverlayService : Service
         var layoutParams = new WindowManagerLayoutParams(
             overlayWidthPx,
             ViewGroup.LayoutParams.WrapContent,
-            Build.VERSION.SdkInt >= BuildVersionCodes.O
+            OperatingSystem.IsAndroidVersionAtLeast(26)
                 ? WindowManagerTypes.ApplicationOverlay
                 : WindowManagerTypes.Phone,
             WindowManagerFlags.NotFocusable | WindowManagerFlags.NotTouchModal,
@@ -138,7 +138,7 @@ public class LyricsOverlayService : Service
 
     private void CreateNotificationChannel()
     {
-        if (Build.VERSION.SdkInt < BuildVersionCodes.O) return;
+        if (!OperatingSystem.IsAndroidVersionAtLeast(26)) return;
 
         var channel = new NotificationChannel(
             ChannelId,
@@ -152,6 +152,7 @@ public class LyricsOverlayService : Service
         manager?.CreateNotificationChannel(channel);
     }
 
+#pragma warning disable CA1416 // Validate platform compatibility
     private Notification BuildNotification(string title, string text)
     {
         var pendingIntent = PendingIntent.GetActivity(
@@ -168,4 +169,5 @@ public class LyricsOverlayService : Service
             .SetOngoing(true)
             .Build()!;
     }
+#pragma warning restore CA1416
 }
