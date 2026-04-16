@@ -241,6 +241,7 @@ public partial class LyricsPage : ContentPage
     {
         var context = Platform.CurrentActivity
             ?? throw new InvalidOperationException("No current Android activity.");
+        Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.SetPreferredWindowContext(context);
 
         // Subscribe to service startup result before launching so we don't miss the event.
         Action<string?>? handler = null;

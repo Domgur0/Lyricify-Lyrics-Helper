@@ -3,6 +3,7 @@ using Android.Content;
 using Android.Hardware.Display;
 using Android.Graphics.Drawables;
 using Android.OS;
+using Android.Runtime;
 using Android.Util;
 using Android.Views;
 using Lyricify.Lyrics.App.Services;
@@ -52,6 +53,7 @@ public class LyricsOverlayService : Service
     private LyricsOverlayView? _overlayView;
     private LyricsViewModel? _viewModel;
     private static int _isRunning;
+    private static WeakReference<Context>? _preferredWindowContext;
     public static bool IsRunning => Interlocked.CompareExchange(ref _isRunning, 0, 0) == 1;
 
     /// <summary>
@@ -65,6 +67,18 @@ public class LyricsOverlayService : Service
     /// Argument is <c>null</c> on success, or a human-readable error string on failure.
     /// </summary>
     public static event Action<string?>? OverlayStartResult;
+
+    /// <summary>
+    /// Records the latest visual context (typically Activity) from UI entry points,
+    /// so the service can resolve WindowManager from a context that is actually
+    /// bound to a display/window token.
+    /// </summary>
+    public static void SetPreferredWindowContext(Context? context)
+    {
+        if (context is null)
+            return;
+        _preferredWindowContext = new WeakReference<Context>(context);
+    }
 
     // ── Service lifecycle ─────────────────────────────────────────────────────
 
@@ -157,6 +171,29 @@ public class LyricsOverlayService : Service
             $"ResolveWindowBinding begin: sdk={(int)Build.VERSION.SdkInt}, " +
             $"service={DescribeContext(this)}, base={DescribeContext(BaseContext)}, app={DescribeContext(ApplicationContext)}");
 
+        if (_preferredWindowContext?.TryGetTarget(out var preferredContext) == true)
+        {
+            var fromPreferred = TryResolveDirect("preferred", preferredContext);
+            if (fromPreferred is not null)
+                return fromPreferred;
+
+            var fromPreferredWindow = TryResolveFromWindowContext("preferred", preferredContext);
+            if (fromPreferredWindow is not null)
+                return fromPreferredWindow;
+        }
+
+        var currentActivity = Lyricify.Lyrics.App.MainActivity.Current;
+        if (currentActivity is not null)
+        {
+            var fromActivity = TryResolveDirect("activity", currentActivity);
+            if (fromActivity is not null)
+                return fromActivity;
+
+            var fromActivityWindow = TryResolveFromWindowContext("activity", currentActivity);
+            if (fromActivityWindow is not null)
+                return fromActivityWindow;
+        }
+
         var fromServiceContext = TryResolveDirect("service", this);
         if (fromServiceContext is not null)
             return fromServiceContext;
@@ -203,7 +240,8 @@ public class LyricsOverlayService : Service
         try
         {
             var windowContext = sourceContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
-            if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+            var manager = TryGetWindowManager(windowContext, $"{sourceName} CreateWindowContext");
+            if (manager is not null)
             {
                 LogDiagnostic($"Resolved WindowManager from {sourceName} CreateWindowContext().");
                 return new WindowBinding(windowContext, manager, true);
@@ -230,7 +268,8 @@ public class LyricsOverlayService : Service
             try
             {
                 var windowContext = displayContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
-                if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+                var manager = TryGetWindowManager(windowContext, $"{sourceName} display-window context");
+                if (manager is not null)
                 {
                     LogDiagnostic($"Resolved WindowManager from {sourceName} CreateDisplayContext().CreateWindowContext().");
                     return new WindowBinding(windowContext, manager, true);
@@ -325,7 +364,8 @@ public class LyricsOverlayService : Service
 
         try
         {
-            if (context.GetSystemService(WindowService) is IWindowManager manager)
+            var manager = TryGetWindowManager(context, $"{sourceName} direct");
+            if (manager is not null)
             {
                 LogDiagnostic($"Resolved WindowManager directly from {sourceName} context ({DescribeContext(context)}).");
                 return new WindowBinding(context, manager, false);
@@ -339,6 +379,64 @@ public class LyricsOverlayService : Service
             LogDiagnostic($"Direct WindowManager lookup threw from {sourceName} context ({DescribeContext(context)}).", ex);
             return null;
         }
+    }
+
+    private IWindowManager? TryGetWindowManager(Context context, string sourceName)
+    {
+        try
+        {
+            var serviceByName = context.GetSystemService(WindowService);
+            if (serviceByName is IWindowManager manager)
+                return manager;
+
+            if (serviceByName is not null)
+            {
+                try
+                {
+                    return serviceByName.JavaCast<IWindowManager>();
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic($"{sourceName} JavaCast<IWindowManager> failed for named service.", ex);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"{sourceName} named WindowService lookup threw.", ex);
+        }
+
+        if (!OperatingSystem.IsAndroidVersionAtLeast(23))
+            return null;
+
+        foreach (var className in new[] { "android.view.WindowManager", "android.view.IWindowManager" })
+        {
+            try
+            {
+                using var serviceClass = Java.Lang.Class.ForName(className);
+                var serviceByClass = context.GetSystemService(serviceClass);
+                if (serviceByClass is IWindowManager manager)
+                    return manager;
+
+                if (serviceByClass is not null)
+                {
+                    try
+                    {
+                        return serviceByClass.JavaCast<IWindowManager>();
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDiagnostic($"{sourceName} JavaCast<IWindowManager> failed for class service {className}.", ex);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"{sourceName} class lookup threw for {className}.", ex);
+            }
+        }
+
+        return null;
     }
 
     // ── Overlay management ────────────────────────────────────────────────────
