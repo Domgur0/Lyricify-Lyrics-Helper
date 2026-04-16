@@ -34,9 +34,6 @@ public class LyricsOverlayService : Service
     {
         base.OnCreate();
 
-        CreateNotificationChannel();
-        StartForeground(NotificationId, BuildNotification("Lyricify is running", "Tap to open"));
-
         // Use the Service's own context (not Application.Context) to obtain WindowManager.
         // On Android 12+ (API 31+), Application.Context is not a display/window context and
         // GetSystemService(WindowService) returns null from it. The Service context has a valid
@@ -56,9 +53,13 @@ public class LyricsOverlayService : Service
             return;
         }
 
+        CreateNotificationChannel();
+        StartForeground(NotificationId, BuildNotification("Lyricify is running", "Tap to open"));
+
         ShowOverlay();
         if (_overlayView is null)
         {
+            StopForeground(StopForegroundFlags.Remove);
             StopSelf();
             return;
         }

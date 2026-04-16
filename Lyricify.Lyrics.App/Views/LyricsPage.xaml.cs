@@ -95,7 +95,7 @@ public partial class LyricsPage : ContentPage
         if (idx >= lines.Count) return;
 
         var item = lines[idx];
-        if (!ReferenceEquals(LyricsCollection.SelectedItem, item))
+        if (!Equals(LyricsCollection.SelectedItem, item))
             LyricsCollection.SelectedItem = item;
 
         if (idx != _lastScrolledLineIndex)
