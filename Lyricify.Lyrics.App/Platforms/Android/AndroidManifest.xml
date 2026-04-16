@@ -22,9 +22,8 @@
         android:supportsRtl="true"
         android:label="Lyricify">
 
-        <!-- Spotify OAuth2 redirect URI handler for http://localhost:766/callback.
-             MAUI WebAuthenticator intercepts this via a local loopback listener;
-             no additional Android intent-filter is needed for localhost redirects. -->
+        <!-- Spotify OAuth2 redirect URI handler is implemented in
+             Platforms/Android/SpotifyWebAuthenticatorCallbackActivity.cs. -->
 
         <!-- Floating lyrics foreground service -->
         <service
