@@ -25,6 +25,12 @@
     <AndroidPackageFormats>apk</AndroidPackageFormats>
   </PropertyGroup>
 
+  <!-- iOS-specific settings -->
+  <PropertyGroup Condition="$(TargetFramework.Contains('-ios'))">
+    <!-- Must match MinimumOSVersion in Platforms/iOS/Info.plist -->
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- MAUI framework -->
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.51" />
