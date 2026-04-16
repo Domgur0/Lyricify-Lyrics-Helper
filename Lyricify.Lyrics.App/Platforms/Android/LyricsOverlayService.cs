@@ -572,8 +572,6 @@ public class LyricsOverlayService : Service
             case nameof(LyricsViewModel.ArtistName):
             case nameof(LyricsViewModel.HasLyrics):
                 _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
-                goto case nameof(LyricsViewModel.TrackTitle);
-                // Update notification with current track.
                 var notification = BuildNotification(
                     _viewModel.TrackTitle,
                     _viewModel.ArtistName);
@@ -768,14 +766,17 @@ public class LyricsOverlayService : Service
             unlockIntent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
 
-        return new Notification.Builder(this, ChannelId)
+        var builder = new Notification.Builder(this, ChannelId)
             .SetContentTitle(title)
             .SetContentText(text)
             .SetSmallIcon(global::Android.Resource.Drawable.IcMediaPlay)
             .SetContentIntent(pendingIntent)
-            .SetOngoing(true)
-            .AddAction(global::Android.Resource.Drawable.IcLockIdleLock, _overlayLocked ? "解锁悬浮歌词" : "保持可拖动", unlockPendingIntent)
-            .Build()!;
+            .SetOngoing(true);
+
+        if (_overlayLocked)
+            builder.AddAction(global::Android.Resource.Drawable.IcLockIdleLock, "解锁悬浮歌词", unlockPendingIntent);
+
+        return builder.Build()!;
     }
 #pragma warning restore CA1416
 }

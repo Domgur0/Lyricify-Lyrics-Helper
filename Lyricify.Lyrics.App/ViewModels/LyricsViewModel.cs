@@ -168,8 +168,9 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
         }
 
         var trackTitle = item.Name ?? string.Empty;
-        var artistName = string.Join(", ", item.Artists?.Select(a => a.Name).Where(n => !string.IsNullOrWhiteSpace(n))
-            ?? Enumerable.Empty<string>());
+        var artistName = item.Artists is null
+            ? string.Empty
+            : string.Join(", ", item.Artists.Select(a => a.Name).Where(n => !string.IsNullOrWhiteSpace(n)));
         var albumArtUrl = item.Album?.Images?.OrderByDescending(img => img.Width).FirstOrDefault()?.Url
             ?? string.Empty;
 
