@@ -26,15 +26,15 @@ public partial class SettingsPage : ContentPage
         try
         {
             await _oauthService.AuthorizeAsync();
-            await DisplayAlert("Signed in", "Spotify login successful.", "OK");
+            await DisplayAlertAsync("Signed in", "Spotify login successful.", "OK");
         }
         catch (TaskCanceledException)
         {
-            await DisplayAlert("Cancelled", "Spotify login was cancelled.", "OK");
+            await DisplayAlertAsync("Cancelled", "Spotify login was cancelled.", "OK");
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Login failed", ex.Message, "OK");
+            await DisplayAlertAsync("Login failed", ex.Message, "OK");
         }
     }
 
@@ -47,7 +47,7 @@ public partial class SettingsPage : ContentPage
         // Validate Client ID (required).
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            await DisplayAlert("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
+            await DisplayAlertAsync("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
             return;
         }
 
@@ -69,18 +69,18 @@ public partial class SettingsPage : ContentPage
             Preferences.Remove(PrefSpDc);
         }
 
-        await DisplayAlert("Saved", "Spotify credentials saved.", "OK");
+        await DisplayAlertAsync("Saved", "Spotify credentials saved.", "OK");
     }
 
     // ── Sign out ──────────────────────────────────────────────────────────────
 
     private async void OnSignOutClicked(object sender, EventArgs e)
     {
-        var confirm = await DisplayAlert("Sign out", "Sign out of Spotify?", "Yes", "No");
+        var confirm = await DisplayAlertAsync("Sign out", "Sign out of Spotify?", "Yes", "No");
         if (!confirm) return;
 
         _oauthService.SignOut();
-        Application.Current!.Windows[0].Page = new NavigationPage(new LoginPage());
+        Application.Current!.Windows[0].Page = new AppShell();
     }
 
     // ── Font size ─────────────────────────────────────────────────────────────
