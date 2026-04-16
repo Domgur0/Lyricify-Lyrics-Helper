@@ -93,7 +93,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     /// Album art shown in the header; falls back to a blank placeholder when idle.
     /// </summary>
     public ImageSource AlbumArtSource =>
-        string.IsNullOrWhiteSpace(AlbumArtUrl) ? "music_note.png" : AlbumArtUrl;
+        string.IsNullOrWhiteSpace(AlbumArtUrl) ? "music_note.svg" : AlbumArtUrl;
 
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(LyricsStatusMessage);
 

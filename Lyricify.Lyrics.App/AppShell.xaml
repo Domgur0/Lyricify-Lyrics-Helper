@@ -15,10 +15,10 @@
         <ShellContent
             Title="Lyrics"
             ContentTemplate="{DataTemplate views:LyricsPage}"
-            Icon="music_note.png" />
+            Icon="music_note.svg" />
         <ShellContent
             Title="Settings"
             ContentTemplate="{DataTemplate views:SettingsPage}"
-            Icon="settings.png" />
+            Icon="settings.svg" />
     </TabBar>
 </Shell>

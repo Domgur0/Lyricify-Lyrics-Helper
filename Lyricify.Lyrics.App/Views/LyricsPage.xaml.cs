@@ -17,6 +17,7 @@ public partial class LyricsPage : ContentPage
     public LyricsPage()
     {
         InitializeComponent();
+        EnsureViewModel();
     }
 
     public LyricsPage(LyricsViewModel viewModel)
@@ -142,9 +143,9 @@ public partial class LyricsPage : ContentPage
     {
         if (_viewModel is not null) return;
 
-        var services = Handler?.MauiContext?.Services
-            ?? Application.Current?.Handler?.MauiContext?.Services
-            ?? IPlatformApplication.Current?.Services;
+        var services = IPlatformApplication.Current?.Services
+            ?? Handler?.MauiContext?.Services
+            ?? Application.Current?.Handler?.MauiContext?.Services;
 
         var viewModel = services?.GetService(typeof(LyricsViewModel)) as LyricsViewModel;
         if (viewModel is not null)
