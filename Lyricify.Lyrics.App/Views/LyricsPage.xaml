@@ -55,6 +55,31 @@
             <ActivityIndicator IsRunning="True" Color="{StaticResource ActiveLineColor}" />
         </Grid>
 
+        <!-- ── Not playing (idle) state ──────────────────────────────────── -->
+        <VerticalStackLayout
+            Grid.Row="1"
+            IsVisible="{Binding ShowNotPlayingHint}"
+            Spacing="12"
+            Padding="40,60"
+            VerticalOptions="Center"
+            HorizontalOptions="Center">
+            <Label
+                Text="🎵"
+                FontSize="48"
+                HorizontalOptions="Center" />
+            <Label
+                Text="No track is currently playing"
+                TextColor="White"
+                FontSize="18"
+                FontAttributes="Bold"
+                HorizontalTextAlignment="Center" />
+            <Label
+                Text="Start playing music on Spotify to see lyrics here."
+                TextColor="{StaticResource InactiveLineColor}"
+                FontSize="14"
+                HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+
         <Label
             Grid.Row="1"
             Text="No lyrics available for this track."
