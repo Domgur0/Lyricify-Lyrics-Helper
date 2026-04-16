@@ -127,9 +127,8 @@ public class LyricsOverlayService : Service
         if (GetSystemService(WindowService) is IWindowManager fromServiceContext)
             return fromServiceContext;
 
-        var currentActivity = global::Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-        if (currentActivity?.GetSystemService(WindowService) is IWindowManager fromActivityContext)
-            return fromActivityContext;
+        if (BaseContext?.GetSystemService(WindowService) is IWindowManager fromBaseContext)
+            return fromBaseContext;
 
         if (ApplicationContext?.GetSystemService(WindowService) is IWindowManager fromAppContext)
             return fromAppContext;
