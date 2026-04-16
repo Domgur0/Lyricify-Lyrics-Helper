@@ -217,16 +217,15 @@ public class LyricsOverlayService : Service
             LogDiagnostic($"{sourceName} CreateWindowContext() failed.", ex);
         }
 
+        var display = TryResolveDisplayForWindowContext(sourceName, sourceContext);
+        if (display is null)
+        {
+            LogDiagnostic($"{sourceName} has no display for CreateDisplayContext fallback.");
+            return null;
+        }
+
         try
         {
-            var display = sourceContext.Display
-                ?? (sourceContext.GetSystemService(DisplayService) as DisplayManager)?.GetDisplay(DefaultDisplayId);
-            if (display is null)
-            {
-                LogDiagnostic($"{sourceName} has no display for CreateDisplayContext fallback.");
-                return null;
-            }
-
             var displayContext = sourceContext.CreateDisplayContext(display);
             try
             {
@@ -248,6 +247,68 @@ public class LyricsOverlayService : Service
         catch (Exception ex)
         {
             LogDiagnostic($"{sourceName} CreateDisplayContext/CreateWindowContext fallback failed.", ex);
+        }
+
+        return null;
+    }
+
+    private Display? TryResolveDisplayForWindowContext(string sourceName, Context sourceContext)
+    {
+        try
+        {
+            var contextDisplay = sourceContext.Display;
+            if (contextDisplay is not null)
+            {
+                LogDiagnostic($"Resolved display from {sourceName} context.Display.");
+                return contextDisplay;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"{sourceName} context.Display lookup failed.", ex);
+        }
+
+        DisplayManager? displayManager = sourceContext.GetSystemService(DisplayService) as DisplayManager;
+        displayManager ??= GetSystemService(DisplayService) as DisplayManager;
+        displayManager ??= ApplicationContext?.GetSystemService(DisplayService) as DisplayManager;
+        if (displayManager is null)
+        {
+            LogDiagnostic($"{sourceName} DisplayManager lookup returned null.");
+            return null;
+        }
+
+        var defaultDisplay = displayManager.GetDisplay(DefaultDisplayId);
+        if (defaultDisplay is not null)
+        {
+            LogDiagnostic($"Resolved display from {sourceName} DisplayManager default display.");
+            return defaultDisplay;
+        }
+
+        try
+        {
+            Display? firstAvailable = null;
+            foreach (var display in displayManager.GetDisplays())
+            {
+                if (display is null)
+                    continue;
+
+                firstAvailable ??= display;
+                if (display.State != DisplayState.Off)
+                {
+                    LogDiagnostic($"Resolved display from {sourceName} DisplayManager active displays.");
+                    return display;
+                }
+            }
+
+            if (firstAvailable is not null)
+            {
+                LogDiagnostic($"Resolved display from {sourceName} DisplayManager first available display.");
+                return firstAvailable;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"{sourceName} DisplayManager.GetDisplays() failed.", ex);
         }
 
         return null;
