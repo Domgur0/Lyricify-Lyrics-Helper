@@ -1,5 +1,6 @@
 using Lyricify.Lyrics.App.ViewModels;
 using Lyricify.Lyrics.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lyricify.Lyrics.App.Views;
 
@@ -17,6 +18,9 @@ public partial class LyricsPage : ContentPage
     public LyricsPage()
     {
         InitializeComponent();
+        var viewModel = IPlatformApplication.Current?.Services.GetService<LyricsViewModel>();
+        if (viewModel is not null)
+            SetViewModel(viewModel);
     }
 
     public LyricsPage(LyricsViewModel viewModel)
