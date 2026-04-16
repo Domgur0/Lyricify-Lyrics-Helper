@@ -7,6 +7,7 @@ using Android.Views;
 using Lyricify.Lyrics.App.Services;
 using Lyricify.Lyrics.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading;
 
 namespace Lyricify.Lyrics.App.Platforms.Android;
 
@@ -37,14 +38,15 @@ public class LyricsOverlayService : Service
     private IWindowManager? _windowManager;
     private LyricsOverlayView? _overlayView;
     private LyricsViewModel? _viewModel;
-    public static bool IsRunning { get; private set; }
+    private static int _isRunning;
+    public static bool IsRunning => Interlocked.CompareExchange(ref _isRunning, 0, 0) == 1;
 
     // ── Service lifecycle ─────────────────────────────────────────────────────
 
     public override void OnCreate()
     {
         base.OnCreate();
-        IsRunning = true;
+        Interlocked.Exchange(ref _isRunning, 1);
 
         // Start in foreground immediately to satisfy the StartForegroundService contract.
         CreateNotificationChannel();
@@ -96,7 +98,7 @@ public class LyricsOverlayService : Service
 
     public override void OnDestroy()
     {
-        IsRunning = false;
+        Interlocked.Exchange(ref _isRunning, 0);
 
         if (_viewModel is not null)
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
