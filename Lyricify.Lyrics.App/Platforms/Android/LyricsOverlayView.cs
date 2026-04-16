@@ -129,7 +129,19 @@ internal sealed class LyricsOverlayView : LinearLayout
             case MotionEventActions.Move:
                 _layoutParams.X = _initialWindowX + (int)(e.RawX - _dragStartX);
                 _layoutParams.Y = _initialWindowY + (int)(e.RawY - _dragStartY);
-                _windowManager.UpdateViewLayout(this, _layoutParams);
+                try
+                {
+                    _windowManager.UpdateViewLayout(this, _layoutParams);
+                }
+                catch (Java.Lang.IllegalArgumentException)
+                {
+                    // Thrown when the view is no longer attached to a window
+                    // (e.g. the overlay service was stopped during a drag gesture).
+                }
+                catch (Java.Lang.IllegalStateException)
+                {
+                    // Thrown when the view's window token has become invalid.
+                }
                 return true;
         }
 

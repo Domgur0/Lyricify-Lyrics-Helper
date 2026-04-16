@@ -89,7 +89,7 @@ public class SpotifyOAuthService
                 $"code_challenge={codeChallenge}")
         }.Uri;
 
-        // MAUI WebAuthenticator handles the browser + localhost redirect interception.
+        // MAUI WebAuthenticator handles browser sign-in and callback interception.
         var result = await WebAuthenticator.Default.AuthenticateAsync(
             authUri, new Uri(RedirectUri));
         var code = result.Properties["code"];
