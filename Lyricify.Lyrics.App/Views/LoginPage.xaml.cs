@@ -4,27 +4,39 @@ namespace Lyricify.Lyrics.App.Views;
 
 public partial class LoginPage : ContentPage
 {
-    private readonly SpotifyOAuthService _oauthService;
+    private SpotifyOAuthService? _oauthService;
 
     public LoginPage()
     {
         InitializeComponent();
-        _oauthService = IPlatformApplication.Current!.Services.GetRequiredService<SpotifyOAuthService>();
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        if (!EnsureOAuthService())
+        {
+            CredentialsMissingFrame.IsVisible = true;
+            LoginButton.IsEnabled = false;
+            ShowError("Service initializing, please try again later.");
+            return;
+        }
 
         // Show a warning and disable the login button when no Client ID is saved.
-        var missingCredentials = !_oauthService.HasClientId;
+        var missingCredentials = !_oauthService!.HasClientId;
         CredentialsMissingFrame.IsVisible = missingCredentials;
         LoginButton.IsEnabled = !missingCredentials;
     }
 
     private async void OnLoginClicked(object sender, EventArgs e)
     {
-        if (!_oauthService.HasClientId)
+        if (!EnsureOAuthService())
+        {
+            ShowError("Service initializing, please try again later.");
+            return;
+        }
+
+        if (!_oauthService!.HasClientId)
         {
             ShowError("Please configure your Spotify Client ID in Settings first.");
             return;
@@ -72,5 +84,17 @@ public partial class LoginPage : ContentPage
     {
         StatusLabel.Text = message;
         StatusLabel.IsVisible = true;
+    }
+
+    private bool EnsureOAuthService()
+    {
+        if (_oauthService is not null) return true;
+
+        var services = Handler?.MauiContext?.Services
+            ?? Application.Current?.Handler?.MauiContext?.Services
+            ?? IPlatformApplication.Current?.Services;
+        _oauthService = services?.GetService(typeof(SpotifyOAuthService)) as SpotifyOAuthService;
+
+        return _oauthService is not null;
     }
 }
