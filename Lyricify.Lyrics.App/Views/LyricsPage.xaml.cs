@@ -17,7 +17,6 @@ public partial class LyricsPage : ContentPage
     public LyricsPage()
     {
         InitializeComponent();
-        EnsureViewModel();
     }
 
     public LyricsPage(LyricsViewModel viewModel)
