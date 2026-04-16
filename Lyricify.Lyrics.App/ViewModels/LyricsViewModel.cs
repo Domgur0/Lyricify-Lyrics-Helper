@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Lyricify.Lyrics.App.Services;
 using Lyricify.Lyrics.Models;
 using Lyricify.Lyrics.Providers.Web.Spotify;
+using System.Threading;
 
 namespace Lyricify.Lyrics.App.ViewModels;
 
@@ -17,6 +18,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     private readonly SpotifyNowPlayingService _nowPlayingService;
     private readonly LyricsService _lyricsService;
     private readonly LyricsSyncService _syncService;
+    private int _trackLoadVersion;
 
     // ── Observable properties ─────────────────────────────────────────────────
 
@@ -141,50 +143,123 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
 
     private async void OnTrackChanged(object? sender, SpotifyCurrentlyPlayingItem? item)
     {
+        var requestVersion = Interlocked.Increment(ref _trackLoadVersion);
+
         if (item is null)
         {
-            // Player idle
-            TrackTitle = string.Empty;
-            ArtistName = string.Empty;
-            AlbumArtUrl = string.Empty;
-            LyricLines = new();
-            HasLyrics = false;
-            IsTrackLoaded = false;
-            _syncService.SetLyrics(null);
-            LyricsStatusMessage = _oauthService.HasValidToken
-                ? "未播放音乐"
-                : "未登录，请长按封面进入设置登录";
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                // Player idle
+                TrackTitle = string.Empty;
+                ArtistName = string.Empty;
+                AlbumArtUrl = string.Empty;
+                LyricLines = new();
+                HasLyrics = false;
+                IsTrackLoaded = false;
+                IsLoadingLyrics = false;
+                CurrentLineText = string.Empty;
+                NextLineText = string.Empty;
+                _syncService.SetLyrics(null);
+                LyricsStatusMessage = _oauthService.HasValidToken
+                    ? "未播放音乐"
+                    : "未登录，请长按封面进入设置登录";
+            });
             return;
         }
 
-        IsTrackLoaded = true;
-        TrackTitle = item.Name ?? string.Empty;
-        ArtistName = string.Join(", ", item.Artists?.Select(a => a.Name).Where(n => !string.IsNullOrWhiteSpace(n))
-            ?? Enumerable.Empty<string>());
-        AlbumArtUrl = item.Album?.Images?.OrderByDescending(img => img.Width).FirstOrDefault()?.Url
+        var trackTitle = item.Name ?? string.Empty;
+        var artistName = item.Artists is null
+            ? string.Empty
+            : string.Join(", ", item.Artists.Select(a => a.Name).Where(n => !string.IsNullOrWhiteSpace(n)));
+        var albumArtUrl = item.Album?.Images?.OrderByDescending(img => img.Width).FirstOrDefault()?.Url
             ?? string.Empty;
 
-        IsLoadingLyrics = true;
-        HasLyrics = false;
-        LyricsStatusMessage = string.Empty;
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            IsTrackLoaded = true;
+            TrackTitle = trackTitle;
+            ArtistName = artistName;
+            AlbumArtUrl = albumArtUrl;
+            CurrentLineText = trackTitle;
+            NextLineText = artistName;
+            IsLoadingLyrics = true;
+            HasLyrics = false;
+            LyricsStatusMessage = string.Empty;
+        });
+
+        LyricsData? lyricsData = null;
+        var trackId = item.Id;
 
         try
         {
-            var lyricsData = await _lyricsService.GetLyricsAsync(
-                item.Id,
-                item.Name ?? string.Empty,
-                item.Artists?.FirstOrDefault()?.Name ?? string.Empty,
-                item.DurationMs);
+            if (!string.IsNullOrWhiteSpace(trackId))
+            {
+                lyricsData = await _lyricsService.GetLyricsAsync(
+                    trackId,
+                    trackTitle,
+                    item.Artists?.FirstOrDefault()?.Name ?? string.Empty,
+                    item.DurationMs);
+            }
+        }
+        catch (Exception)
+        {
+            lyricsData = null;
+        }
+
+        if (requestVersion != Volatile.Read(ref _trackLoadVersion))
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (requestVersion != Volatile.Read(ref _trackLoadVersion))
+                return;
 
             LyricLines = lyricsData?.Lines ?? new List<ILineInfo>();
             HasLyrics = LyricLines.Count > 0;
             _syncService.SetLyrics(lyricsData);
             if (!HasLyrics)
+            {
+                CurrentLineText = TrackTitle;
+                NextLineText = ArtistName;
                 LyricsStatusMessage = "未获取到歌词";
-        }
-        finally
-        {
+            }
+
             IsLoadingLyrics = false;
+        });
+    }
+
+    partial void OnTrackTitleChanged(string value)
+    {
+        if (HasLyrics || string.IsNullOrWhiteSpace(value))
+            return;
+        CurrentLineText = value;
+    }
+
+    partial void OnArtistNameChanged(string value)
+    {
+        if (HasLyrics)
+            return;
+        NextLineText = value;
+    }
+
+    partial void OnHasLyricsChanged(bool value)
+    {
+        if (value)
+            return;
+
+        CurrentLineText = TrackTitle;
+        NextLineText = ArtistName;
+    }
+
+    partial void OnLyricLinesChanged(List<ILineInfo> value)
+    {
+        if (value.Count > 0)
+            return;
+
+        if (IsTrackLoaded)
+        {
+            CurrentLineText = TrackTitle;
+            NextLineText = ArtistName;
         }
     }
 
@@ -218,13 +293,13 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
             CurrentSyllableIndex = result.SyllableIndex;
             LineProgress = result.LineProgress;
             SyllableProgress = result.SyllableProgress;
-            CurrentLineText = result.CurrentLine?.Text ?? string.Empty;
+            CurrentLineText = result.CurrentLine?.Text ?? (HasLyrics ? string.Empty : TrackTitle);
 
             // Look ahead one line for sub-title display.
             if (result.LineIndex >= 0 && result.LineIndex + 1 < LyricLines.Count)
                 NextLineText = LyricLines[result.LineIndex + 1].Text;
             else
-                NextLineText = string.Empty;
+                NextLineText = HasLyrics ? string.Empty : ArtistName;
         });
     }
 

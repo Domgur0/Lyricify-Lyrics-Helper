@@ -161,6 +161,91 @@
                             Toggled="OnOverlayEnabledToggled"
                             OnColor="{StaticResource ActiveLineColor}" />
                     </Grid>
+
+                    <Button
+                        Text="Unlock floating lyrics"
+                        BackgroundColor="#333333"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnUnlockOverlayClicked"
+                        IsVisible="{OnPlatform Default=False, Android=True}" />
+
+                    <!-- Android-only: floating lyrics current-line color -->
+                    <Label
+                        Text="Floating lyrics color"
+                        TextColor="{StaticResource InactiveLineColor}"
+                        FontSize="13"
+                        IsVisible="{OnPlatform Default=False, Android=True}" />
+                    <HorizontalStackLayout
+                        Spacing="10"
+                        IsVisible="{OnPlatform Default=False, Android=True}">
+                        <Border
+                            x:Name="ColorSwatchRed"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="#E05252"
+                            Stroke="Transparent"
+                            StrokeThickness="3">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnOverlayColorSelected" CommandParameter="#E05252" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border
+                            x:Name="ColorSwatchBlue"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="#39B4E8"
+                            Stroke="Transparent"
+                            StrokeThickness="3">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnOverlayColorSelected" CommandParameter="#39B4E8" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border
+                            x:Name="ColorSwatchGreen"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="#52C57A"
+                            Stroke="Transparent"
+                            StrokeThickness="3">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnOverlayColorSelected" CommandParameter="#52C57A" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border
+                            x:Name="ColorSwatchGold"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="#C9A84C"
+                            Stroke="Transparent"
+                            StrokeThickness="3">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnOverlayColorSelected" CommandParameter="#C9A84C" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                        <Border
+                            x:Name="ColorSwatchPurple"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="#7B5CC7"
+                            Stroke="Transparent"
+                            StrokeThickness="3">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="18" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnOverlayColorSelected" CommandParameter="#7B5CC7" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                    </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
 

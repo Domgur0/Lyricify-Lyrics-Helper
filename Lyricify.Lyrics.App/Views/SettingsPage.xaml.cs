@@ -12,6 +12,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefClientSecret = "spotify_client_secret";
     private const string PrefSpDc = "spotify_sp_dc";
     private const string PrefOverlayEnabled = "overlay_enabled";
+    private const string PrefOverlayLyricColor = "overlay_lyric_color";
 
     public SettingsPage()
     {
@@ -106,6 +107,61 @@ public partial class SettingsPage : ContentPage
     private void OnOverlayEnabledToggled(object sender, ToggledEventArgs e)
     {
         Preferences.Set(PrefOverlayEnabled, e.Value);
+        if (e.Value)
+            return;
+
+        Preferences.Set("overlay_should_run", false);
+#if ANDROID
+        var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+        var intent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+        context.StopService(intent);
+#endif
+    }
+
+    private void OnUnlockOverlayClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+        var intent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+        intent.SetAction(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.ActionUnlockOverlay);
+        context.StartService(intent);
+#endif
+    }
+
+    // ── Floating lyrics color ─────────────────────────────────────────────────
+
+    private void OnOverlayColorSelected(object sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not string hexColor)
+            return;
+
+        Preferences.Set(PrefOverlayLyricColor, hexColor);
+        UpdateColorSwatchSelection(hexColor);
+
+#if ANDROID
+        if (Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning)
+        {
+            var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+            var intent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+            intent.SetAction(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.ActionSetColor);
+            intent.PutExtra(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.ExtraColorHex, hexColor);
+            context.StartService(intent);
+        }
+#endif
+    }
+
+    private void UpdateColorSwatchSelection(string selectedHex)
+    {
+        // The swatch borders are declared in XAML in the same order as LyricsOverlaySettings.PaletteHexColors.
+        var swatches = new Border[] { ColorSwatchRed, ColorSwatchBlue, ColorSwatchGreen, ColorSwatchGold, ColorSwatchPurple };
+        var palette = LyricsOverlaySettings.PaletteHexColors;
+        for (var i = 0; i < swatches.Length; i++)
+        {
+            var hex = i < palette.Count ? palette[i] : string.Empty;
+            swatches[i].Stroke = string.Equals(hex, selectedHex, StringComparison.OrdinalIgnoreCase)
+                ? Color.FromArgb("#FFFFFF")
+                : Color.FromArgb("#00000000");
+        }
     }
 
     protected override void OnAppearing()
@@ -121,6 +177,7 @@ public partial class SettingsPage : ContentPage
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
         OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
+        UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
 
         // Re-apply sp_dc to the provider in case the app was restarted.
         var spDc = Preferences.Get(PrefSpDc, string.Empty);

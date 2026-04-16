@@ -41,6 +41,17 @@ public class LyricsOverlayService : Service
     private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
     private const int DefaultDisplayId = 0;
+    private const string PrefOverlayLyricColor = "overlay_lyric_color";
+    private const string PrefOverlayOpacity = "overlay_opacity";
+    private const string PrefOverlayShouldRun = "overlay_should_run";
+    private const string PrefOverlayPosX = "overlay_position_x";
+    private const string PrefOverlayPosY = "overlay_position_y";
+    private const string PrefOverlayLocked = "overlay_locked";
+    private const string PrefLyricsFontSize = "lyrics_font_size";
+    public const string ActionUnlockOverlay = "lyricify.overlay.action.UNLOCK";
+    public const string ActionDisableOverlay = "lyricify.overlay.action.DISABLE";
+    public const string ActionSetColor = "lyricify.overlay.action.SET_COLOR";
+    public const string ExtraColorHex = "color_hex";
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
     // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
@@ -51,7 +62,9 @@ public class LyricsOverlayService : Service
     private Context? _windowContext;
     private bool _ownsWindowContext;
     private LyricsOverlayView? _overlayView;
+    private WindowManagerLayoutParams? _overlayLayoutParams;
     private LyricsViewModel? _viewModel;
+    private bool _overlayLocked;
     private static int _isRunning;
     private static WeakReference<Context>? _preferredWindowContext;
     public static bool IsRunning => Interlocked.CompareExchange(ref _isRunning, 0, 0) == 1;
@@ -135,7 +148,28 @@ public class LyricsOverlayService : Service
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
-        => StartCommandResult.Sticky;
+    {
+        switch (intent?.Action)
+        {
+            case ActionSetColor:
+                var colorHex = intent?.GetStringExtra(ExtraColorHex);
+                if (LyricsOverlaySettings.IsValidPaletteColor(colorHex))
+                {
+                    global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLyricColor, colorHex!);
+                    RunOnMainThread(() => _overlayView?.SetActiveColor(colorHex!));
+                }
+                break;
+            case ActionUnlockOverlay:
+                SetOverlayLocked(false);
+                break;
+            case ActionDisableOverlay:
+                global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayShouldRun, false);
+                StopSelf();
+                break;
+        }
+
+        return StartCommandResult.Sticky;
+    }
 
     public override IBinder? OnBind(Intent? intent) => null;
 
@@ -458,8 +492,10 @@ public class LyricsOverlayService : Service
 
         var density = ctx.Resources!.DisplayMetrics!.Density;
         var overlayWidthPx = (int)(360 * density);
+        var positionX = global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayPosX, 0);
+        var positionY = global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayPosY, (int)(80 * density));
 
-        var layoutParams = new WindowManagerLayoutParams(
+        _overlayLayoutParams = new WindowManagerLayoutParams(
             overlayWidthPx,
             ViewGroup.LayoutParams.WrapContent,
             OperatingSystem.IsAndroidVersionAtLeast(26)
@@ -469,15 +505,25 @@ public class LyricsOverlayService : Service
             global::Android.Graphics.Format.Translucent)
         {
             Gravity = GravityFlags.Top | GravityFlags.Start,
-            X = 0,
-            Y = (int)(80 * density),
-            Alpha = global::Microsoft.Maui.Storage.Preferences.Get("overlay_opacity", 0.9f),
+            X = positionX,
+            Y = positionY,
+            Alpha = global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayOpacity, 0.9f),
         };
 
-        _overlayView.SetWindowContext(_windowManager, layoutParams);
+        _overlayView.SetWindowContext(_windowManager, _overlayLayoutParams);
+        _overlayView.PositionChanged += OnOverlayPositionChanged;
+        _overlayView.CloseRequested += OnOverlayCloseRequested;
+        _overlayView.LockStateChanged += OnOverlayLockStateChanged;
+        _overlayView.FontSizeChanged += OnOverlayFontSizeChanged;
+        _overlayView.ColorChanged += OnOverlayColorChanged;
+        _overlayView.SetTextSizeSp(global::Microsoft.Maui.Storage.Preferences.Get(PrefLyricsFontSize, 17));
+        _overlayView.SetActiveColor(global::Microsoft.Maui.Storage.Preferences.Get(
+            PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
+        SetOverlayLocked(global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayLocked, false));
         try
         {
-            _windowManager.AddView(_overlayView, layoutParams);
+            _windowManager.AddView(_overlayView, _overlayLayoutParams);
+            global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayShouldRun, true);
             return null;
         }
         catch (Java.Lang.IllegalStateException ex)
@@ -505,6 +551,11 @@ public class LyricsOverlayService : Service
         if (_overlayView is null || _windowManager is null) return;
         try
         {
+            _overlayView.PositionChanged -= OnOverlayPositionChanged;
+            _overlayView.CloseRequested -= OnOverlayCloseRequested;
+            _overlayView.LockStateChanged -= OnOverlayLockStateChanged;
+            _overlayView.FontSizeChanged -= OnOverlayFontSizeChanged;
+            _overlayView.ColorChanged -= OnOverlayColorChanged;
             _windowManager.RemoveView(_overlayView);
         }
         catch
@@ -512,6 +563,7 @@ public class LyricsOverlayService : Service
             // View may have already been removed.
         }
         _overlayView = null;
+        _overlayLayoutParams = null;
     }
 
     // ── ViewModel events ──────────────────────────────────────────────────────
@@ -532,7 +584,9 @@ public class LyricsOverlayService : Service
                 break;
 
             case nameof(LyricsViewModel.TrackTitle):
-                // Update notification with current track.
+            case nameof(LyricsViewModel.ArtistName):
+            case nameof(LyricsViewModel.HasLyrics):
+                _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
                 var notification = BuildNotification(
                     _viewModel.TrackTitle,
                     _viewModel.ArtistName);
@@ -547,6 +601,59 @@ public class LyricsOverlayService : Service
         if (_overlayView is null || _viewModel is null) return;
         _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
         _overlayView.UpdateProgress(_viewModel.LineProgress);
+    }
+
+    private void OnOverlayPositionChanged(int x, int y)
+    {
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayPosX, x);
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayPosY, y);
+    }
+
+    private void OnOverlayCloseRequested()
+    {
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayShouldRun, false);
+        StopSelf();
+    }
+
+    private void OnOverlayLockStateChanged(bool isLocked) => SetOverlayLocked(isLocked);
+
+    private void OnOverlayFontSizeChanged(float size)
+    {
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefLyricsFontSize, size);
+        _overlayView?.SetTextSizeSp(size);
+    }
+
+    private void OnOverlayColorChanged(string hexColor)
+    {
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLyricColor, hexColor);
+    }
+
+    private void SetOverlayLocked(bool isLocked)
+    {
+        _overlayLocked = isLocked;
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLocked, _overlayLocked);
+        if (_overlayLayoutParams is null || _windowManager is null || _overlayView is null)
+            return;
+
+        _overlayLayoutParams.Flags = _overlayLocked
+            ? WindowManagerFlags.NotFocusable | WindowManagerFlags.NotTouchable
+            : WindowManagerFlags.NotFocusable | WindowManagerFlags.NotTouchModal;
+        _overlayLayoutParams.Alpha = _overlayLocked
+            ? 1f
+            : global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayOpacity, 0.9f);
+        _overlayView.SetLocked(_overlayLocked);
+
+        try
+        {
+            _windowManager.UpdateViewLayout(_overlayView, _overlayLayoutParams);
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic("Failed to update overlay lock state.", ex);
+        }
+
+        var manager = GetSystemService(NotificationService) as NotificationManager;
+        manager?.Notify(NotificationId, BuildNotification(_viewModel?.TrackTitle ?? "Lyricify is running", _viewModel?.ArtistName ?? "Tap to open"));
     }
 
     /// <summary>
@@ -576,6 +683,7 @@ public class LyricsOverlayService : Service
     {
         LogDiagnostic(reason, level: AppLogLevel.Error);
         LastStartupError = reason;
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayShouldRun, false);
         if (OperatingSystem.IsAndroidVersionAtLeast(24))
             StopForeground(StopForegroundFlags.Remove);
         else
@@ -670,13 +778,25 @@ public class LyricsOverlayService : Service
             new Intent(this, typeof(MainActivity)),
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
 
-        return new Notification.Builder(this, ChannelId)
+        var unlockIntent = new Intent(this, typeof(LyricsOverlayService));
+        unlockIntent.SetAction(ActionUnlockOverlay);
+        var unlockPendingIntent = PendingIntent.GetService(
+            this,
+            1,
+            unlockIntent,
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        var builder = new Notification.Builder(this, ChannelId)
             .SetContentTitle(title)
             .SetContentText(text)
             .SetSmallIcon(global::Android.Resource.Drawable.IcMediaPlay)
             .SetContentIntent(pendingIntent)
-            .SetOngoing(true)
-            .Build()!;
+            .SetOngoing(true);
+
+        if (_overlayLocked)
+            builder.AddAction(global::Android.Resource.Drawable.IcLockIdleLock, "解锁悬浮歌词", unlockPendingIntent);
+
+        return builder.Build()!;
     }
 #pragma warning restore CA1416
 }

@@ -11,6 +11,7 @@ public partial class LyricsPage : ContentPage
     private CancellationTokenSource? _albumArtLongPressCts;
     private const int AlbumArtLongPressMs = 650;
     private const string PrefOverlayEnabled = "overlay_enabled";
+    private const string PrefOverlayShouldRun = "overlay_should_run";
 
     /// <summary>
     /// Parameterless constructor used by MAUI Shell <c>DataTemplate</c> resolution.
@@ -46,6 +47,7 @@ public partial class LyricsPage : ContentPage
 #if ANDROID
         _overlayRunning = Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning;
         OverlayToggleButton.Text = _overlayRunning ? OverlayButtonTextHide : OverlayButtonTextShow;
+        var shouldRestoreOverlay = Preferences.Get(PrefOverlayShouldRun, false);
 
         // Show any previously recorded startup error (e.g. app navigated away during start).
         if (!_overlayRunning && Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.LastStartupError is { } lastErr)
@@ -60,6 +62,10 @@ public partial class LyricsPage : ContentPage
         if (_retryOverlayStartAfterPermission && hasOverlayPermission)
         {
             _retryOverlayStartAfterPermission = false;
+            StartAndroidOverlay();
+        }
+        else if (!_overlayRunning && OverlayToggleButton.IsVisible && shouldRestoreOverlay && hasOverlayPermission)
+        {
             StartAndroidOverlay();
         }
 #endif
@@ -232,6 +238,7 @@ public partial class LyricsPage : ContentPage
         {
             var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
             context.StopService(serviceIntent);
+            Preferences.Set(PrefOverlayShouldRun, false);
             _overlayRunning = false;
             (sender as Button)!.Text = OverlayButtonTextShow;
         }
@@ -253,12 +260,14 @@ public partial class LyricsPage : ContentPage
                 if (result is null)
                 {
                     _overlayRunning = true;
+                    Preferences.Set(PrefOverlayShouldRun, true);
                     OverlayToggleButton.Text = OverlayButtonTextHide;
                     StatusMessageLabel.IsVisible = false;
                 }
                 else
                 {
                     _overlayRunning = false;
+                    Preferences.Set(PrefOverlayShouldRun, false);
                     OverlayToggleButton.Text = OverlayButtonTextShow;
                     StatusMessageLabel.Text = result;
                     StatusMessageLabel.IsVisible = true;
