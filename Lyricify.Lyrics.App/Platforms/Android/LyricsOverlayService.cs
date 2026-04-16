@@ -39,6 +39,7 @@ public class LyricsOverlayService : Service
     private const int NotificationId = 1001;
     private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
+    private const int DefaultDisplayId = 0;
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
     // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
@@ -219,7 +220,7 @@ public class LyricsOverlayService : Service
         try
         {
             var display = sourceContext.Display
-                ?? (sourceContext.GetSystemService(DisplayService) as DisplayManager)?.GetDisplay(0);
+                ?? (sourceContext.GetSystemService(DisplayService) as DisplayManager)?.GetDisplay(DefaultDisplayId);
             if (display is null)
             {
                 LogDiagnostic($"{sourceName} has no display for CreateDisplayContext fallback.");
@@ -432,7 +433,10 @@ public class LyricsOverlayService : Service
         var finalMessage = ex is null
             ? message
             : $"{message} ({ex.GetType().Name}: {ex.Message})";
-        Log.Warn(LogTag, finalMessage);
+        if (level >= AppLogLevel.Error)
+            Log.Error(LogTag, finalMessage);
+        else
+            Log.Warn(LogTag, finalMessage);
         AppLogService.Current?.Add(level, LogTag, finalMessage);
     }
 
