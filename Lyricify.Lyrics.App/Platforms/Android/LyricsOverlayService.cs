@@ -18,7 +18,9 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
 /// Start via <see cref="Context.StartForegroundService"/>.
 /// Stop via <see cref="Context.StopService"/>.
 /// </summary>
-[Service(Exported = false)]
+[Service(
+    Exported = false,
+    ForegroundServiceType = (global::Android.Content.PM.ForegroundService)0x40000000)]
 public class LyricsOverlayService : Service
 {
     private const string ChannelId = "lyricify_overlay";
