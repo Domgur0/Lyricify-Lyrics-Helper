@@ -35,7 +35,7 @@
                         IsPassword="true" />
 
                     <Label
-                        Text="Find these values in your app at developer.spotify.com/dashboard.&#x0a;Redirect URI must be set to http://localhost:766/callback."
+                        Text="Find these values in your app at developer.spotify.com/dashboard.&#x0a;Redirect URI must be set to lyricify://callback."
                         TextColor="#888888"
                         FontSize="11"
                         HorizontalTextAlignment="Center" />

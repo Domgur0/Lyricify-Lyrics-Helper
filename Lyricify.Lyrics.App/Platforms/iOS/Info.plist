@@ -20,11 +20,24 @@
     <key>MinimumOSVersion</key>
     <string>15.0</string>
 
-    <!-- Redirect URI: http://localhost:766/callback
-         MAUI WebAuthenticator handles this via a local loopback server.
-         No custom URL scheme registration is needed for localhost redirects. -->
+    <!-- Redirect URI: lyricify://callback
+         MAUI WebAuthenticator intercepts this custom scheme after Spotify redirects.
+         The scheme must also be listed in CFBundleURLTypes below. -->
 
-    <!-- Allow outbound HTTPS and the localhost redirect (Spotify API, LRCLIB) -->
+    <!-- Register the custom URL scheme so iOS routes lyricify://callback back to the app -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.lyricify.lyrics.app.oauth</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>lyricify</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- Allow outbound HTTPS (Spotify API, LRCLIB) -->
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
@@ -43,13 +56,6 @@
                 <key>NSExceptionAllowsInsecureHTTPLoads</key>
                 <false/>
                 <key>NSIncludesSubdomains</key>
-                <true/>
-            </dict>
-            <!-- Allow plain HTTP to localhost so WebAuthenticator can receive
-                 the OAuth2 callback on http://localhost:766/callback. -->
-            <key>localhost</key>
-            <dict>
-                <key>NSExceptionAllowsInsecureHTTPLoads</key>
                 <true/>
             </dict>
         </dict>

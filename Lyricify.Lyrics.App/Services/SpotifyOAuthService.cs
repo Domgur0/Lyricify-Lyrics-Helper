@@ -20,7 +20,7 @@ public class SpotifyOAuthService
 {
     // ── Fixed configuration ───────────────────────────────────────────────────
     // RedirectUri must exactly match the value registered in the Spotify dashboard.
-    private const string RedirectUri = "http://localhost:766/callback";
+    private const string RedirectUri = "lyricify://callback";
     private const string Scopes = "user-read-playback-state";
 
     private const string AuthorizeUrl = "https://accounts.spotify.com/authorize";
