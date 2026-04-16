@@ -24,6 +24,10 @@ public class LyricsOverlayService : Service
     private const string ChannelId = "lyricify_overlay";
     private const int NotificationId = 1001;
 
+    // Android 14+ (API 34) requires the service type to be passed to StartForeground.
+    // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
+    private const int ForegroundServiceTypeSpecialUse = 0x40000000;
+
     private IWindowManager? _windowManager;
     private LyricsOverlayView? _overlayView;
     private LyricsViewModel? _viewModel;
@@ -36,7 +40,12 @@ public class LyricsOverlayService : Service
 
         // Start in foreground immediately to satisfy the StartForegroundService contract.
         CreateNotificationChannel();
-        StartForeground(NotificationId, BuildNotification("Lyricify is running", "Tap to open"));
+        var notification = BuildNotification("Lyricify is running", "Tap to open");
+        // On Android 14+ (API 34) startForeground must declare the matching service type.
+        if (OperatingSystem.IsAndroidVersionAtLeast(34))
+            StartForeground(NotificationId, notification, ForegroundServiceTypeSpecialUse);
+        else
+            StartForeground(NotificationId, notification);
 
         // Use the Service's own context (not Application.Context) to obtain WindowManager.
         // On Android 12+ (API 31+), Application.Context is not a display/window context and

@@ -12,6 +12,9 @@
     <!-- Keep the overlay service alive in the foreground -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+    <!-- Required on Android 14+ when foregroundServiceType="specialUse" -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- Post notifications (required on Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
