@@ -84,7 +84,8 @@ public class LyricsOverlayService : Service
         }
 
         // Resolve the shared ViewModel from the MAUI DI container.
-        var services = IPlatformApplication.Current?.Services;
+        var services = IPlatformApplication.Current?.Services
+            ?? global::Microsoft.Maui.Controls.Application.Current?.Handler?.MauiContext?.Services;
         _viewModel = services?.GetService<LyricsViewModel>();
         if (_viewModel is null)
         {

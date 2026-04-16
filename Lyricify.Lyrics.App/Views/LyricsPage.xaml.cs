@@ -54,6 +54,7 @@ public partial class LyricsPage : ContentPage
             StatusMessageLabel.IsVisible = true;
         }
 
+        // SYSTEM_ALERT_WINDOW runtime gate exists from API 23; below that no runtime permission prompt is required.
         var hasOverlayPermission = !OperatingSystem.IsAndroidVersionAtLeast(23)
             || Android.Provider.Settings.CanDrawOverlays(Platform.CurrentActivity);
         if (_retryOverlayStartAfterPermission && hasOverlayPermission)
