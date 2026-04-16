@@ -7,10 +7,8 @@ namespace Lyricify.Lyrics.App;
 [IntentFilter(
     [Intent.ActionView],
     Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
-    DataScheme = "http",
-    DataHost = "localhost",
-    DataPort = "766",
-    DataPathPrefix = "/callback")]
+    DataScheme = "lyricify",
+    DataHost = "callback")]
 public class SpotifyWebAuthenticatorCallbackActivity : WebAuthenticatorCallbackActivity
 {
 }
