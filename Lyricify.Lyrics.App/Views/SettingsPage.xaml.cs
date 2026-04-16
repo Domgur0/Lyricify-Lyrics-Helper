@@ -11,6 +11,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefClientId = "spotify_client_id";
     private const string PrefClientSecret = "spotify_client_secret";
     private const string PrefSpDc = "spotify_sp_dc";
+    private const string PrefOverlayEnabled = "overlay_enabled";
 
     public SettingsPage()
     {
@@ -19,6 +20,23 @@ public partial class SettingsPage : ContentPage
     }
 
     // ── Save all Spotify credentials ──────────────────────────────────────────
+
+    private async void OnSignInClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await _oauthService.AuthorizeAsync();
+            await DisplayAlertAsync("Signed in", "Spotify login successful.", "OK");
+        }
+        catch (TaskCanceledException)
+        {
+            await DisplayAlertAsync("Cancelled", "Spotify login was cancelled.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Login failed", ex.Message, "OK");
+        }
+    }
 
     private async void OnSaveCredentialsClicked(object sender, EventArgs e)
     {
@@ -29,7 +47,7 @@ public partial class SettingsPage : ContentPage
         // Validate Client ID (required).
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            await DisplayAlert("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
+            await DisplayAlertAsync("Missing Client ID", "Please enter your Spotify Client ID.", "OK");
             return;
         }
 
@@ -51,18 +69,18 @@ public partial class SettingsPage : ContentPage
             Preferences.Remove(PrefSpDc);
         }
 
-        await DisplayAlert("Saved", "Spotify credentials saved.", "OK");
+        await DisplayAlertAsync("Saved", "Spotify credentials saved.", "OK");
     }
 
     // ── Sign out ──────────────────────────────────────────────────────────────
 
     private async void OnSignOutClicked(object sender, EventArgs e)
     {
-        var confirm = await DisplayAlert("Sign out", "Sign out of Spotify?", "Yes", "No");
+        var confirm = await DisplayAlertAsync("Sign out", "Sign out of Spotify?", "Yes", "No");
         if (!confirm) return;
 
         _oauthService.SignOut();
-        Application.Current!.Windows[0].Page = new NavigationPage(new LoginPage());
+        Application.Current!.Windows[0].Page = new AppShell();
     }
 
     // ── Font size ─────────────────────────────────────────────────────────────
@@ -81,6 +99,11 @@ public partial class SettingsPage : ContentPage
         Preferences.Set("overlay_opacity", (float)e.NewValue);
     }
 
+    private void OnOverlayEnabledToggled(object sender, ToggledEventArgs e)
+    {
+        Preferences.Set(PrefOverlayEnabled, e.Value);
+    }
+
     protected override void OnAppearing()
     {
         base.OnAppearing();
@@ -92,6 +115,7 @@ public partial class SettingsPage : ContentPage
 
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
+        OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
 
         // Re-apply sp_dc to the provider in case the app was restarted.
         var spDc = Preferences.Get(PrefSpDc, string.Empty);

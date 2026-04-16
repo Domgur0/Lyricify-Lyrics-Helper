@@ -7,6 +7,9 @@ public partial class LyricsPage : ContentPage
 {
     private readonly LyricsViewModel _viewModel;
     private int _lastScrolledLineIndex = -1;
+    private CancellationTokenSource? _albumArtLongPressCts;
+    private const int AlbumArtLongPressMs = 650;
+    private const string PrefOverlayEnabled = "overlay_enabled";
 
     /// <summary>
     /// Parameterless constructor used by MAUI Shell <c>DataTemplate</c> resolution.
@@ -28,6 +31,8 @@ public partial class LyricsPage : ContentPage
     {
         base.OnAppearing();
         _viewModel.StartPollingCommand.Execute(null);
+        OverlayToggleButton.IsVisible = DeviceInfo.Current.Platform == DevicePlatform.Android
+            && Preferences.Get(PrefOverlayEnabled, false);
 
         // Subscribe to sync updates to drive live highlighting and auto-scroll.
         if (_viewModel is { } vm)
@@ -39,6 +44,9 @@ public partial class LyricsPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        _albumArtLongPressCts?.Cancel();
+        _albumArtLongPressCts?.Dispose();
+        _albumArtLongPressCts = null;
 
         if (_viewModel is { } vm)
         {
@@ -91,6 +99,40 @@ public partial class LyricsPage : ContentPage
 #if ANDROID
         ToggleAndroidOverlay(sender);
 #endif
+    }
+
+    private async void OnAlbumArtPressed(object sender, EventArgs e)
+    {
+        _albumArtLongPressCts?.Cancel();
+        _albumArtLongPressCts?.Dispose();
+        _albumArtLongPressCts = new CancellationTokenSource();
+        var token = _albumArtLongPressCts.Token;
+
+        try
+        {
+            await Task.Delay(AlbumArtLongPressMs, token);
+            if (token.IsCancellationRequested) return;
+            OpenSettingsTab();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void OnAlbumArtReleased(object sender, EventArgs e)
+    {
+        _albumArtLongPressCts?.Cancel();
+        _albumArtLongPressCts?.Dispose();
+        _albumArtLongPressCts = null;
+    }
+
+    private void OpenSettingsTab()
+    {
+        if (Shell.Current is not Shell shell) return;
+        var settingsTab = shell.Items.FirstOrDefault(i =>
+            string.Equals(i.Title, "Settings", StringComparison.OrdinalIgnoreCase));
+        if (settingsTab is not null)
+            shell.CurrentItem = settingsTab;
     }
 
 #if ANDROID

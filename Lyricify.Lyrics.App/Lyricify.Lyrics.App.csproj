@@ -35,6 +35,9 @@
 
     <!-- JSON parsing (same version as the library) -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+
+    <!-- Debug logging (AddDebug extension; not a MAUI transitive dep in .NET 10) -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.6" Condition="'$(Configuration)' == 'Debug'" />
   </ItemGroup>
 
   <ItemGroup>
