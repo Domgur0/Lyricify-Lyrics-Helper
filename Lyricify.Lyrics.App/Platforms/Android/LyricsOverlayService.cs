@@ -38,6 +38,8 @@ public class LyricsOverlayService : Service
         (global::Android.Content.PM.ForegroundService)ForegroundServiceTypeSpecialUseValue;
 
     private IWindowManager? _windowManager;
+    private Context? _windowContext;
+    private bool _ownsWindowContext;
     private LyricsOverlayView? _overlayView;
     private LyricsViewModel? _viewModel;
     private static int _isRunning;
@@ -74,12 +76,15 @@ public class LyricsOverlayService : Service
 
         // Resolve WindowManager from the best available runtime context.
         // Some devices/ROMs may return null for one context but not others.
-        _windowManager = ResolveWindowManager();
-        if (_windowManager is null)
+        var windowBinding = ResolveWindowBinding();
+        if (windowBinding is null)
         {
             FailAndStop("无法获取 WindowManager，请重启应用");
             return;
         }
+        _windowContext = windowBinding.Value.Context;
+        _windowManager = windowBinding.Value.WindowManager;
+        _ownsWindowContext = windowBinding.Value.OwnsContext;
 
         // Resolve the shared ViewModel from the MAUI DI container.
         var services = IPlatformApplication.Current?.Services
@@ -119,24 +124,71 @@ public class LyricsOverlayService : Service
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
 
         RemoveOverlay();
+        if (_windowContext is not null && _ownsWindowContext)
+            _windowContext.Dispose();
+        _windowContext = null;
+        _ownsWindowContext = false;
         base.OnDestroy();
     }
 
     /// <summary>
-    /// Resolves <see cref="IWindowManager"/> from service-related contexts.
-    /// Service context is preferred; BaseContext/ApplicationContext are best-effort fallbacks
-    /// for vendor ROMs where one specific context may return null.
+    /// Resolves a context + <see cref="IWindowManager"/> pair from service-related contexts.
+    /// Service context is preferred. For Android 11+ we also try window contexts, which are
+    /// better aligned with overlay window tokens on some ROMs.
     /// </summary>
-    private IWindowManager? ResolveWindowManager()
+    private (Context Context, IWindowManager WindowManager, bool OwnsContext)? ResolveWindowBinding()
     {
         if (GetSystemService(WindowService) is IWindowManager fromServiceContext)
-            return fromServiceContext;
+            return (this, fromServiceContext, false);
 
-        if (BaseContext?.GetSystemService(WindowService) is IWindowManager fromBaseContext)
-            return fromBaseContext;
+        var fromServiceWindowContext = TryResolveFromWindowContext(this);
+        if (fromServiceWindowContext is not null)
+            return fromServiceWindowContext;
 
-        if (ApplicationContext?.GetSystemService(WindowService) is IWindowManager fromAppContext)
-            return fromAppContext;
+        var baseContext = BaseContext;
+        if (baseContext?.GetSystemService(WindowService) is IWindowManager fromBaseContext)
+            return (baseContext, fromBaseContext, false);
+        if (baseContext is not null)
+        {
+            var fromBaseWindowContext = TryResolveFromWindowContext(baseContext);
+            if (fromBaseWindowContext is not null)
+                return fromBaseWindowContext;
+        }
+
+        var applicationContext = ApplicationContext;
+        if (applicationContext?.GetSystemService(WindowService) is IWindowManager fromAppContext)
+            return (applicationContext, fromAppContext, false);
+        if (applicationContext is not null)
+        {
+            var fromAppWindowContext = TryResolveFromWindowContext(applicationContext);
+            if (fromAppWindowContext is not null)
+                return fromAppWindowContext;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Creates a dedicated window context (API 30+) and resolves WindowManager from it.
+    /// This path is more reliable on some vendor ROMs where direct context lookup returns null.
+    /// </summary>
+    private (Context Context, IWindowManager WindowManager, bool OwnsContext)? TryResolveFromWindowContext(Context sourceContext)
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(30))
+            return null;
+
+        try
+        {
+            var windowContext = sourceContext.CreateWindowContext(WindowManagerTypes.ApplicationOverlay, null);
+            if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+                return (windowContext, manager, true);
+
+            windowContext.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(LogTag, $"CreateWindowContext failed: {ex.Message}");
+        }
 
         return null;
     }
@@ -153,10 +205,9 @@ public class LyricsOverlayService : Service
         if (!global::Android.Provider.Settings.CanDrawOverlays(this))
             return "悬浮窗创建失败：缺少悬浮窗权限，请在设置中授予";
 
-        // Use the Service context so the view shares the same window token as the
-        // WindowManager obtained above; using Application.Context here would cause a
-        // context/token mismatch when UpdateViewLayout is called on Android 12+.
-        var ctx = this;
+        // Use the context paired with WindowManager to keep the same window token
+        // (never use Application.Context here, which can mismatch on Android 12+).
+        var ctx = _windowContext ?? this;
         _overlayView = new LyricsOverlayView(ctx);
 
         var density = ctx.Resources!.DisplayMetrics!.Density;
