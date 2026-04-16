@@ -30,9 +30,9 @@ internal sealed class LyricsOverlayView : LinearLayout
     private IWindowManager? _windowManager;
     private bool _isLocked;
     private bool _controlsVisible;
-    private readonly float[] _fontSizes = [14f, 16f, 18f, 22f];
+    private readonly float[] _fontSizes = [14f, 17f, 20f, 24f];
     private int _fontSizeIndex = 1;
-    private float _currentFontSizeSp = 16f;
+    private float _currentFontSizeSp = 17f;
     private readonly float _dragThresholdPx;
 
     // Colours
@@ -238,7 +238,8 @@ internal sealed class LyricsOverlayView : LinearLayout
                     var deltaY = Math.Abs(e.RawY - _dragStartY);
                     if (deltaX <= _dragThresholdPx && deltaY <= _dragThresholdPx)
                         ToggleControlsVisibility();
-                    PositionChanged?.Invoke(_layoutParams.X, _layoutParams.Y);
+                    else
+                        PositionChanged?.Invoke(_layoutParams.X, _layoutParams.Y);
                 }
                 PerformClick();
                 return true;
