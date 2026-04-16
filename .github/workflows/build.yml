@@ -64,9 +64,10 @@ jobs:
           while IFS= read -r CANDIDATE; do
             [ -z "$CANDIDATE" ] && continue
             DEVELOPER_DIR="$CANDIDATE/Contents/Developer"
+            SDK_PATH="$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
             if [ -x "$DEVELOPER_DIR/usr/bin/actool" ] \
-              && [ -d "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ] \
-              && DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild -sdk macosx -version Path >/dev/null 2>&1 \
+              && [ -d "$SDK_PATH" ] \
+              && DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild -sdk "$SDK_PATH" -find actool >/dev/null 2>&1 \
               && DEVELOPER_DIR="$DEVELOPER_DIR" xcrun --sdk macosx --find actool >/dev/null 2>&1; then
               XCODE_ROOT="$CANDIDATE"
               break
@@ -78,9 +79,10 @@ jobs:
           if [ -z "$XCODE_ROOT" ]; then
             CANDIDATE=$(xcode-select -p 2>/dev/null | sed 's|/Contents/Developer||')
             DEVELOPER_DIR="$CANDIDATE/Contents/Developer"
+            SDK_PATH="$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
             if [ -x "$DEVELOPER_DIR/usr/bin/actool" ] \
-              && [ -d "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ] \
-              && DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild -sdk macosx -version Path >/dev/null 2>&1 \
+              && [ -d "$SDK_PATH" ] \
+              && DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild -sdk "$SDK_PATH" -find actool >/dev/null 2>&1 \
               && DEVELOPER_DIR="$DEVELOPER_DIR" xcrun --sdk macosx --find actool >/dev/null 2>&1; then
               XCODE_ROOT="$CANDIDATE"
             fi
