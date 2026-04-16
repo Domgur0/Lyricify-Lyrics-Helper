@@ -1,5 +1,6 @@
 using Android.App;
 using Android.Content;
+using Android.Hardware.Display;
 using Android.Graphics.Drawables;
 using Android.OS;
 using Android.Util;
@@ -38,6 +39,7 @@ public class LyricsOverlayService : Service
     private const int NotificationId = 1001;
     private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
+    private const int DefaultDisplayId = 0;
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
     // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
@@ -151,33 +153,41 @@ public class LyricsOverlayService : Service
     /// </summary>
     private WindowBinding? ResolveWindowBinding()
     {
-        if (GetSystemService(WindowService) is IWindowManager fromServiceContext)
-            return new WindowBinding(this, fromServiceContext, false);
+        LogDiagnostic(
+            $"ResolveWindowBinding begin: sdk={(int)Build.VERSION.SdkInt}, " +
+            $"service={DescribeContext(this)}, base={DescribeContext(BaseContext)}, app={DescribeContext(ApplicationContext)}");
 
-        var fromServiceWindowContext = TryResolveFromWindowContext(this);
+        var fromServiceContext = TryResolveDirect("service", this);
+        if (fromServiceContext is not null)
+            return fromServiceContext;
+
+        var fromServiceWindowContext = TryResolveFromWindowContext("service", this);
         if (fromServiceWindowContext is not null)
             return fromServiceWindowContext;
 
         var baseContext = BaseContext;
-        if (baseContext?.GetSystemService(WindowService) is IWindowManager fromBaseContext)
-            return new WindowBinding(baseContext, fromBaseContext, false);
+        var fromBaseContext = TryResolveDirect("base", baseContext);
+        if (fromBaseContext is not null)
+            return fromBaseContext;
         if (baseContext is not null)
         {
-            var fromBaseWindowContext = TryResolveFromWindowContext(baseContext);
+            var fromBaseWindowContext = TryResolveFromWindowContext("base", baseContext);
             if (fromBaseWindowContext is not null)
                 return fromBaseWindowContext;
         }
 
         var applicationContext = ApplicationContext;
-        if (applicationContext?.GetSystemService(WindowService) is IWindowManager fromAppContext)
-            return new WindowBinding(applicationContext, fromAppContext, false);
+        var fromAppContext = TryResolveDirect("application", applicationContext);
+        if (fromAppContext is not null)
+            return fromAppContext;
         if (applicationContext is not null)
         {
-            var fromAppWindowContext = TryResolveFromWindowContext(applicationContext);
+            var fromAppWindowContext = TryResolveFromWindowContext("application", applicationContext);
             if (fromAppWindowContext is not null)
                 return fromAppWindowContext;
         }
 
+        LogDiagnostic("ResolveWindowBinding failed: all context paths returned null WindowManager.");
         return null;
     }
 
@@ -185,7 +195,7 @@ public class LyricsOverlayService : Service
     /// Creates a dedicated window context (API 30+) and resolves WindowManager from it.
     /// This path is more reliable on some vendor ROMs where direct context lookup returns null.
     /// </summary>
-    private WindowBinding? TryResolveFromWindowContext(Context sourceContext)
+    private WindowBinding? TryResolveFromWindowContext(string sourceName, Context sourceContext)
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(30))
             return null;
@@ -194,16 +204,79 @@ public class LyricsOverlayService : Service
         {
             var windowContext = sourceContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
             if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+            {
+                LogDiagnostic($"Resolved WindowManager from {sourceName} CreateWindowContext().");
                 return new WindowBinding(windowContext, manager, true);
+            }
 
+            LogDiagnostic($"{sourceName} CreateWindowContext() returned null WindowManager.");
             windowContext.Dispose();
         }
         catch (Exception ex)
         {
-            Log.Debug(LogTag, $"CreateWindowContext failed ({ex.GetType().Name}): {ex}");
+            LogDiagnostic($"{sourceName} CreateWindowContext() failed.", ex);
+        }
+
+        try
+        {
+            var display = sourceContext.Display
+                ?? (sourceContext.GetSystemService(DisplayService) as DisplayManager)?.GetDisplay(DefaultDisplayId);
+            if (display is null)
+            {
+                LogDiagnostic($"{sourceName} has no display for CreateDisplayContext fallback.");
+                return null;
+            }
+
+            var displayContext = sourceContext.CreateDisplayContext(display);
+            try
+            {
+                var windowContext = displayContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
+                if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+                {
+                    LogDiagnostic($"Resolved WindowManager from {sourceName} CreateDisplayContext().CreateWindowContext().");
+                    return new WindowBinding(windowContext, manager, true);
+                }
+
+                LogDiagnostic($"{sourceName} display-window context returned null WindowManager.");
+                windowContext.Dispose();
+            }
+            finally
+            {
+                displayContext.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"{sourceName} CreateDisplayContext/CreateWindowContext fallback failed.", ex);
         }
 
         return null;
+    }
+
+    private WindowBinding? TryResolveDirect(string sourceName, Context? context)
+    {
+        if (context is null)
+        {
+            LogDiagnostic($"{sourceName} context is null.");
+            return null;
+        }
+
+        try
+        {
+            if (context.GetSystemService(WindowService) is IWindowManager manager)
+            {
+                LogDiagnostic($"Resolved WindowManager directly from {sourceName} context ({DescribeContext(context)}).");
+                return new WindowBinding(context, manager, false);
+            }
+
+            LogDiagnostic($"Direct WindowManager lookup returned null from {sourceName} context ({DescribeContext(context)}).");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"Direct WindowManager lookup threw from {sourceName} context ({DescribeContext(context)}).", ex);
+            return null;
+        }
     }
 
     // ── Overlay management ────────────────────────────────────────────────────
@@ -341,8 +414,7 @@ public class LyricsOverlayService : Service
     /// </summary>
     private void FailAndStop(string reason)
     {
-        Log.Warn(LogTag, reason);
-        AppLogService.Current?.Add(AppLogLevel.Error, LogTag, reason);
+        LogDiagnostic(reason, level: AppLogLevel.Error);
         LastStartupError = reason;
         if (OperatingSystem.IsAndroidVersionAtLeast(24))
             StopForeground(StopForegroundFlags.Remove);
@@ -357,6 +429,27 @@ public class LyricsOverlayService : Service
         RunOnMainThread(() => OverlayStartResult?.Invoke(reason));
 
         StopSelf();
+    }
+
+    private static string DescribeContext(Context? context)
+        => context is null ? "null" : $"{context.GetType().Name}@{context.GetHashCode():x}";
+
+    private static void LogDiagnostic(string message, Exception? ex = null, AppLogLevel level = AppLogLevel.Warning)
+    {
+        var finalMessage = ex is null
+            ? message
+            : $"{message} ({ex.GetType().Name}: {ex.Message})";
+        switch (level)
+        {
+            case AppLogLevel.Error:
+                Log.Error(LogTag, finalMessage);
+                break;
+            case AppLogLevel.Warning:
+            default:
+                Log.Warn(LogTag, finalMessage);
+                break;
+        }
+        AppLogService.Current?.Add(level, LogTag, finalMessage);
     }
 
     private void PostErrorNotification(string message)
