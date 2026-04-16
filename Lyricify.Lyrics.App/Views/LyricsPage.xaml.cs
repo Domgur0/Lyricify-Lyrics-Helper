@@ -54,7 +54,9 @@ public partial class LyricsPage : ContentPage
             StatusMessageLabel.IsVisible = true;
         }
 
-        if (_retryOverlayStartAfterPermission && Android.Provider.Settings.CanDrawOverlays(Platform.CurrentActivity))
+        var hasOverlayPermission = !OperatingSystem.IsAndroidVersionAtLeast(23)
+            || Android.Provider.Settings.CanDrawOverlays(Platform.CurrentActivity);
+        if (_retryOverlayStartAfterPermission && hasOverlayPermission)
         {
             _retryOverlayStartAfterPermission = false;
             StartAndroidOverlay();

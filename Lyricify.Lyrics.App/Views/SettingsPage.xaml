@@ -13,13 +13,15 @@
             <Label Text="Spotify" TextColor="White" FontSize="18" FontAttributes="Bold" />
 
             <!-- Login status (only shown when signed in) -->
-            <Frame
+            <Border
                 x:Name="LoginStatusFrame"
-                BackgroundColor="#0D1B12"
-                BorderColor="#1DB954"
-                CornerRadius="8"
+                Background="#0D1B12"
+                Stroke="#1DB954"
                 Padding="12"
                 IsVisible="False">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="4">
                     <Label
                         x:Name="LoginStatusLabel"
@@ -31,9 +33,12 @@
                         TextColor="#888888"
                         FontSize="11" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
-            <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
+            <Border Background="#1A1A1A" Stroke="#333333" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="12">
 
                     <!-- Client ID -->
@@ -100,12 +105,15 @@
                         HeightRequest="40"
                         Clicked="OnSignOutClicked" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
             <!-- ── Display ───────────────────────────────────────────────── -->
             <Label Text="Display" TextColor="White" FontSize="18" FontAttributes="Bold" />
 
-            <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
+            <Border Background="#1A1A1A" Stroke="#333333" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="12">
                     <Label Text="Font size" TextColor="{StaticResource InactiveLineColor}" FontSize="13" />
                     <Slider
@@ -154,17 +162,20 @@
                             OnColor="{StaticResource ActiveLineColor}" />
                     </Grid>
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
             <!-- ── About ─────────────────────────────────────────────────── -->
             <Label Text="About" TextColor="White" FontSize="18" FontAttributes="Bold" />
-            <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
+            <Border Background="#1A1A1A" Stroke="#333333" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
                 <VerticalStackLayout Spacing="4">
                     <Label Text="Lyricify 1.0.0" TextColor="White" FontSize="14" />
                     <Label Text="Powered by Lyricify Lyrics Helper" TextColor="{StaticResource InactiveLineColor}" FontSize="12" />
                     <Label Text="Lyrics provided by Spotify and LRCLIB" TextColor="{StaticResource InactiveLineColor}" FontSize="12" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
