@@ -133,10 +133,14 @@ internal sealed class LyricsOverlayView : LinearLayout
                 {
                     _windowManager.UpdateViewLayout(this, _layoutParams);
                 }
-                catch (Exception)
+                catch (Java.Lang.IllegalArgumentException)
                 {
-                    // View may have been removed from the window while a drag was in progress.
-                    // Swallow the exception so the overlay does not crash the app on touch.
+                    // Thrown when the view is no longer attached to a window
+                    // (e.g. the overlay service was stopped during a drag gesture).
+                }
+                catch (Java.Lang.IllegalStateException)
+                {
+                    // Thrown when the view's window token has become invalid.
                 }
                 return true;
         }
