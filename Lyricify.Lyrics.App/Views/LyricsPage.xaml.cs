@@ -198,13 +198,25 @@ public partial class LyricsPage : ContentPage
                     Android.Provider.Settings.ActionManageOverlayPermission,
                     Android.Net.Uri.Parse($"package:{context.PackageName}"));
                 context.StartActivity(intent);
+                StatusMessageLabel.Text = "请授予悬浮窗权限后再次点击按钮";
+                StatusMessageLabel.IsVisible = true;
                 return;
             }
 
             var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
-            context.StartForegroundService(serviceIntent);
-            _overlayRunning = true;
-            (sender as Button)!.Text = OverlayButtonTextHide;
+            try
+            {
+                context.StartForegroundService(serviceIntent);
+                _overlayRunning = true;
+                (sender as Button)!.Text = OverlayButtonTextHide;
+                StatusMessageLabel.IsVisible = false;
+            }
+            catch (Exception ex)
+            {
+                _overlayRunning = false;
+                StatusMessageLabel.Text = $"启动悬浮窗失败：{ex.Message}";
+                StatusMessageLabel.IsVisible = true;
+            }
         }
         else
         {

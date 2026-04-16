@@ -49,8 +49,9 @@ internal sealed class LyricsOverlayView : LinearLayout
         _currentLineView.SetTextColor(ActiveColor);
         _currentLineView.SetTypeface(null, global::Android.Graphics.TypefaceStyle.Bold);
         _currentLineView.Gravity = GravityFlags.CenterHorizontal;
-        _currentLineView.SetMaxLines(2);
-        _currentLineView.SetSingleLine(false);
+        _currentLineView.SetMaxLines(1);
+        _currentLineView.SetSingleLine(true);
+        _currentLineView.Ellipsize = TextUtils.TruncateAt.End;
 
         _nextLineView = new TextView(context)
         {
@@ -59,6 +60,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         _nextLineView.SetTextColor(DimColor);
         _nextLineView.Gravity = GravityFlags.CenterHorizontal;
         _nextLineView.SetMaxLines(1);
+        _nextLineView.Ellipsize = TextUtils.TruncateAt.End;
 
         AddView(_currentLineView);
         AddView(_nextLineView);
