@@ -46,6 +46,14 @@ public partial class LyricsPage : ContentPage
 #if ANDROID
         _overlayRunning = Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning;
         OverlayToggleButton.Text = _overlayRunning ? OverlayButtonTextHide : OverlayButtonTextShow;
+
+        // Show any previously recorded startup error (e.g. app navigated away during start).
+        if (!_overlayRunning && Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.LastStartupError is { } lastErr)
+        {
+            StatusMessageLabel.Text = lastErr;
+            StatusMessageLabel.IsVisible = true;
+        }
+
         if (_retryOverlayStartAfterPermission && Android.Provider.Settings.CanDrawOverlays(Platform.CurrentActivity))
         {
             _retryOverlayStartAfterPermission = false;
@@ -231,16 +239,40 @@ public partial class LyricsPage : ContentPage
         var context = Platform.CurrentActivity
             ?? throw new InvalidOperationException("No current Android activity.");
 
+        // Subscribe to service startup result before launching so we don't miss the event.
+        Action<string?>? handler = null;
+        handler = result =>
+        {
+            Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.OverlayStartResult -= handler;
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (result is null)
+                {
+                    _overlayRunning = true;
+                    OverlayToggleButton.Text = OverlayButtonTextHide;
+                    StatusMessageLabel.IsVisible = false;
+                }
+                else
+                {
+                    _overlayRunning = false;
+                    OverlayToggleButton.Text = OverlayButtonTextShow;
+                    StatusMessageLabel.Text = result;
+                    StatusMessageLabel.IsVisible = true;
+                }
+            });
+        };
+        Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.OverlayStartResult += handler;
+
         var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
         try
         {
             context.StartForegroundService(serviceIntent);
-            _overlayRunning = true;
-            OverlayToggleButton.Text = OverlayButtonTextHide;
-            StatusMessageLabel.IsVisible = false;
+            // UI updates will arrive via the OverlayStartResult event.
         }
         catch (Exception ex)
         {
+            // StartForegroundService itself threw – clean up the subscription.
+            Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.OverlayStartResult -= handler;
             _overlayRunning = false;
             OverlayToggleButton.Text = OverlayButtonTextShow;
             StatusMessageLabel.Text = $"启动悬浮窗失败：{ex.Message}";

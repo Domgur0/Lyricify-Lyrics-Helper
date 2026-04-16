@@ -27,7 +27,9 @@ public class LyricsOverlayService : Service
 {
     private const string LogTag = "LyricifyOverlay";
     private const string ChannelId = "lyricify_overlay";
+    private const string ErrorChannelId = "lyricify_error";
     private const int NotificationId = 1001;
+    private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
@@ -41,12 +43,25 @@ public class LyricsOverlayService : Service
     private static int _isRunning;
     public static bool IsRunning => Interlocked.CompareExchange(ref _isRunning, 0, 0) == 1;
 
+    /// <summary>
+    /// Non-null when the last service startup attempt ended in failure.
+    /// Cleared at the beginning of each <see cref="OnCreate"/> call.
+    /// </summary>
+    public static string? LastStartupError { get; private set; }
+
+    /// <summary>
+    /// Fired on the calling thread after <see cref="OnCreate"/> completes.
+    /// Argument is <c>null</c> on success, or a human-readable error string on failure.
+    /// </summary>
+    public static event Action<string?>? OverlayStartResult;
+
     // ── Service lifecycle ─────────────────────────────────────────────────────
 
     public override void OnCreate()
     {
         base.OnCreate();
         Interlocked.Exchange(ref _isRunning, 1);
+        LastStartupError = null;
 
         // Start in foreground immediately to satisfy the StartForegroundService contract.
         CreateNotificationChannel();
@@ -64,7 +79,7 @@ public class LyricsOverlayService : Service
         _windowManager = GetSystemService(WindowService) as IWindowManager;
         if (_windowManager is null)
         {
-            StopSelf();
+            FailAndStop("无法获取 WindowManager，请重启应用");
             return;
         }
 
@@ -74,21 +89,30 @@ public class LyricsOverlayService : Service
         _viewModel = services?.GetService<LyricsViewModel>();
         if (_viewModel is null)
         {
-            StopSelf();
+            FailAndStop("无法获取歌词服务，请重启应用");
             return;
         }
 
-        ShowOverlay();
-        if (_overlayView is null)
+        var overlayError = ShowOverlay();
+        if (overlayError is not null)
         {
-            StopForeground(StopForegroundFlags.Remove);
-            StopSelf();
+            FailAndStop(overlayError);
             return;
         }
 
         // Subscribe to sync updates.
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         UpdateOverlayFromViewModel();
+
+        // Notify page and other observers that startup succeeded (on main thread).
+        global::Android.OS.Handler? mainHandler = null;
+        try { mainHandler = new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper!); }
+        catch { /* ignore */ }
+
+        if (mainHandler is not null)
+            mainHandler.Post(() => OverlayStartResult?.Invoke(null));
+        else
+            OverlayStartResult?.Invoke(null);
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -109,10 +133,15 @@ public class LyricsOverlayService : Service
 
     // ── Overlay management ────────────────────────────────────────────────────
 
-    private void ShowOverlay()
+    /// <summary>
+    /// Creates and adds the overlay view to the window.
+    /// Returns <c>null</c> on success, or a human-readable error string on failure.
+    /// </summary>
+    private string? ShowOverlay()
     {
-        if (_overlayView is not null || _windowManager is null) return;
-        if (!global::Android.Provider.Settings.CanDrawOverlays(this)) return;
+        if (_windowManager is null) return "内部错误：WindowManager 为空";
+        if (!global::Android.Provider.Settings.CanDrawOverlays(this))
+            return "悬浮窗创建失败：缺少悬浮窗权限，请在设置中授予";
 
         // Use the Service context so the view shares the same window token as the
         // WindowManager obtained above; using Application.Context here would cause a
@@ -142,21 +171,25 @@ public class LyricsOverlayService : Service
         try
         {
             _windowManager.AddView(_overlayView, layoutParams);
+            return null;
         }
-        catch (Java.Lang.IllegalStateException)
+        catch (Java.Lang.IllegalStateException ex)
         {
-            Log.Warn(LogTag, "Failed to add overlay view: illegal state.");
+            Log.Warn(LogTag, $"Failed to add overlay view: illegal state. {ex.Message}");
             _overlayView = null;
+            return $"悬浮窗创建失败：窗口状态异常 ({ex.Message})";
         }
-        catch (Java.Lang.SecurityException)
+        catch (Java.Lang.SecurityException ex)
         {
-            Log.Warn(LogTag, "Failed to add overlay view: missing overlay permission.");
+            Log.Warn(LogTag, $"Failed to add overlay view: missing overlay permission. {ex.Message}");
             _overlayView = null;
+            return $"悬浮窗创建失败：缺少悬浮窗权限 ({ex.Message})";
         }
-        catch (Android.Views.WindowManagerBadTokenException)
+        catch (Android.Views.WindowManagerBadTokenException ex)
         {
-            Log.Warn(LogTag, "Failed to add overlay view: invalid window token.");
+            Log.Warn(LogTag, $"Failed to add overlay view: invalid window token. {ex.Message}");
             _overlayView = null;
+            return $"悬浮窗创建失败：窗口令牌无效 ({ex.Message})";
         }
     }
 
@@ -209,6 +242,58 @@ public class LyricsOverlayService : Service
         _overlayView.UpdateProgress(_viewModel.LineProgress);
     }
 
+    // ── Failure helpers ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Stores <paramref name="reason"/> in <see cref="LastStartupError"/>,
+    /// fires <see cref="OverlayStartResult"/> on the main thread,
+    /// posts an error notification, then stops the service.
+    /// </summary>
+    private void FailAndStop(string reason)
+    {
+        Log.Warn(LogTag, reason);
+        LastStartupError = reason;
+        StopForeground(StopForegroundFlags.Remove);
+
+        // Post a persistent error notification so the user can see the reason
+        // even after navigating away from the app.
+        PostErrorNotification(reason);
+
+        // Notify any subscribed UI on the main thread.
+        global::Android.OS.Handler? mainHandler = null;
+        try { mainHandler = new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper!); }
+        catch { /* ignore */ }
+
+        if (mainHandler is not null)
+            mainHandler.Post(() => OverlayStartResult?.Invoke(reason));
+        else
+            OverlayStartResult?.Invoke(reason);
+
+        StopSelf();
+    }
+
+    private void PostErrorNotification(string message)
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(26)) return;
+
+        var pendingIntent = PendingIntent.GetActivity(
+            this,
+            0,
+            new Intent(this, typeof(MainActivity)),
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        var notification = new Notification.Builder(this, ErrorChannelId)
+            .SetContentTitle("Lyricify 悬浮窗启动失败")
+            .SetContentText(message)
+            .SetSmallIcon(global::Android.Resource.Drawable.IcDialogAlert)
+            .SetContentIntent(pendingIntent)
+            .SetAutoCancel(true)
+            .Build()!;
+
+        var manager = GetSystemService(NotificationService) as NotificationManager;
+        manager?.Notify(ErrorNotificationId, notification);
+    }
+
     // ── Notification helpers ──────────────────────────────────────────────────
 
     private void CreateNotificationChannel()
@@ -223,8 +308,17 @@ public class LyricsOverlayService : Service
             Description = "Shown while the floating lyrics window is active",
         };
 
+        var errorChannel = new NotificationChannel(
+            ErrorChannelId,
+            "Lyricify errors",
+            NotificationImportance.Default)
+        {
+            Description = "Alerts when the floating lyrics window fails to start",
+        };
+
         var manager = GetSystemService(NotificationService) as NotificationManager;
         manager?.CreateNotificationChannel(channel);
+        manager?.CreateNotificationChannel(errorChannel);
     }
 
 #pragma warning disable CA1416 // Validate platform compatibility
