@@ -178,4 +178,29 @@ public partial class SettingsPage : ContentPage
 
         return _oauthService is not null;
     }
+
+    // ── Diagnostics ───────────────────────────────────────────────────────────
+
+    private async void OnExportLogClicked(object sender, EventArgs e)
+    {
+        var logText = AppLogService.Current?.ExportText()
+            ?? "(Log service unavailable – restart the app and try again.)";
+
+        var fileName = $"lyricify-log-{DateTime.UtcNow:yyyyMMdd-HHmmss}.txt";
+        var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+
+        try
+        {
+            await File.WriteAllTextAsync(filePath, logText);
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "Lyricify Log",
+                File = new ShareFile(filePath, "text/plain"),
+            });
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Export Failed", ex.Message, "OK");
+        }
+    }
 }

@@ -342,6 +342,7 @@ public class LyricsOverlayService : Service
     private void FailAndStop(string reason)
     {
         Log.Warn(LogTag, reason);
+        AppLogService.Current?.Add(AppLogLevel.Error, LogTag, reason);
         LastStartupError = reason;
         if (OperatingSystem.IsAndroidVersionAtLeast(24))
             StopForeground(StopForegroundFlags.Remove);

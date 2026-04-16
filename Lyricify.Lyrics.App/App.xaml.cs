@@ -1,3 +1,5 @@
+using Lyricify.Lyrics.App.Services;
+
 namespace Lyricify.Lyrics.App;
 
 public partial class App : Application
@@ -79,6 +81,7 @@ public partial class App : Application
     private static void ReportError(string title, Exception ex)
     {
         System.Diagnostics.Debug.WriteLine($"[{title}] {ex}");
+        AppLogService.Current?.Add(AppLogLevel.Error, title, ex.ToString());
 #if ANDROID
         TryShowAndroidErrorNotification(title, ex.Message);
 #endif
