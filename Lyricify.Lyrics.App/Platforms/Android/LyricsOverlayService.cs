@@ -25,6 +25,8 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
     ForegroundServiceType = (global::Android.Content.PM.ForegroundService)ForegroundServiceTypeSpecialUseValue)]
 public class LyricsOverlayService : Service
 {
+    private readonly record struct WindowBinding(Context Context, IWindowManager WindowManager, bool OwnsContext);
+
     private const string LogTag = "LyricifyOverlay";
     private const string ChannelId = "lyricify_overlay";
     private const string ErrorChannelId = "lyricify_error";
@@ -125,7 +127,10 @@ public class LyricsOverlayService : Service
 
         RemoveOverlay();
         if (_windowContext is not null && _ownsWindowContext)
-            _windowContext.Dispose();
+        {
+            try { _windowContext.Dispose(); }
+            catch { /* ignore dispose failures */ }
+        }
         _windowContext = null;
         _ownsWindowContext = false;
         base.OnDestroy();
@@ -136,10 +141,10 @@ public class LyricsOverlayService : Service
     /// Service context is preferred. For Android 11+ we also try window contexts, which are
     /// better aligned with overlay window tokens on some ROMs.
     /// </summary>
-    private (Context Context, IWindowManager WindowManager, bool OwnsContext)? ResolveWindowBinding()
+    private WindowBinding? ResolveWindowBinding()
     {
         if (GetSystemService(WindowService) is IWindowManager fromServiceContext)
-            return (this, fromServiceContext, false);
+            return new WindowBinding(this, fromServiceContext, false);
 
         var fromServiceWindowContext = TryResolveFromWindowContext(this);
         if (fromServiceWindowContext is not null)
@@ -147,7 +152,7 @@ public class LyricsOverlayService : Service
 
         var baseContext = BaseContext;
         if (baseContext?.GetSystemService(WindowService) is IWindowManager fromBaseContext)
-            return (baseContext, fromBaseContext, false);
+            return new WindowBinding(baseContext, fromBaseContext, false);
         if (baseContext is not null)
         {
             var fromBaseWindowContext = TryResolveFromWindowContext(baseContext);
@@ -157,7 +162,7 @@ public class LyricsOverlayService : Service
 
         var applicationContext = ApplicationContext;
         if (applicationContext?.GetSystemService(WindowService) is IWindowManager fromAppContext)
-            return (applicationContext, fromAppContext, false);
+            return new WindowBinding(applicationContext, fromAppContext, false);
         if (applicationContext is not null)
         {
             var fromAppWindowContext = TryResolveFromWindowContext(applicationContext);
@@ -172,7 +177,7 @@ public class LyricsOverlayService : Service
     /// Creates a dedicated window context (API 30+) and resolves WindowManager from it.
     /// This path is more reliable on some vendor ROMs where direct context lookup returns null.
     /// </summary>
-    private (Context Context, IWindowManager WindowManager, bool OwnsContext)? TryResolveFromWindowContext(Context sourceContext)
+    private WindowBinding? TryResolveFromWindowContext(Context sourceContext)
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(30))
             return null;
@@ -181,7 +186,7 @@ public class LyricsOverlayService : Service
         {
             var windowContext = sourceContext.CreateWindowContext(WindowManagerTypes.ApplicationOverlay, null);
             if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
-                return (windowContext, manager, true);
+                return new WindowBinding(windowContext, manager, true);
 
             windowContext.Dispose();
         }
