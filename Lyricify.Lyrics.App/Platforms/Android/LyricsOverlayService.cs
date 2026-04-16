@@ -383,10 +383,9 @@ public class LyricsOverlayService : Service
 
     private IWindowManager? TryGetWindowManager(Context context, string sourceName)
     {
-        Java.Lang.Object? serviceByName = null;
         try
         {
-            serviceByName = context.GetSystemService(WindowService);
+            var serviceByName = context.GetSystemService(WindowService);
             if (serviceByName is IWindowManager manager)
                 return manager;
 
