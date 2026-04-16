@@ -12,6 +12,27 @@
             <!-- ── Spotify credentials ────────────────────────────────────── -->
             <Label Text="Spotify" TextColor="White" FontSize="18" FontAttributes="Bold" />
 
+            <!-- Login status (only shown when signed in) -->
+            <Frame
+                x:Name="LoginStatusFrame"
+                BackgroundColor="#0D1B12"
+                BorderColor="#1DB954"
+                CornerRadius="8"
+                Padding="12"
+                IsVisible="False">
+                <VerticalStackLayout Spacing="4">
+                    <Label
+                        x:Name="LoginStatusLabel"
+                        TextColor="#1DB954"
+                        FontSize="13"
+                        FontAttributes="Bold" />
+                    <Label
+                        x:Name="LoginExpiryLabel"
+                        TextColor="#888888"
+                        FontSize="11" />
+                </VerticalStackLayout>
+            </Frame>
+
             <Frame BackgroundColor="#1A1A1A" BorderColor="#333333" CornerRadius="8" Padding="16">
                 <VerticalStackLayout Spacing="12">
 

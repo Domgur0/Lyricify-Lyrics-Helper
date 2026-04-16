@@ -27,6 +27,7 @@ public partial class SettingsPage : ContentPage
         try
         {
             await _oauthService!.AuthorizeAsync();
+            RefreshLoginStatus();
             await DisplayAlertAsync("Signed in", "Spotify login successful.", "OK");
         }
         catch (TaskCanceledException)
@@ -125,6 +126,45 @@ public partial class SettingsPage : ContentPage
         var spDc = Preferences.Get(PrefSpDc, string.Empty);
         if (!string.IsNullOrWhiteSpace(spDc))
             ProviderHelper.SpotifyApi.SetSpDc(spDc);
+
+        RefreshLoginStatus();
+    }
+
+    // ── Login status ──────────────────────────────────────────────────────────
+
+    private void RefreshLoginStatus()
+    {
+        if (_oauthService is null || !_oauthService.HasValidToken)
+        {
+            LoginStatusFrame.IsVisible = false;
+            return;
+        }
+
+        LoginStatusLabel.Text = "✓ 已登录 Spotify";
+
+        var expiry = _oauthService.TokenExpiresAt;
+        if (expiry is { } dt)
+        {
+            var diff = dt - DateTimeOffset.UtcNow;
+            if (diff <= TimeSpan.Zero)
+            {
+                LoginExpiryLabel.Text = "令牌已过期，将在下次请求时自动刷新";
+            }
+            else
+            {
+                var local = dt.LocalDateTime;
+                var isSameDay = local.Date == DateTime.Today;
+                LoginExpiryLabel.Text = isSameDay
+                    ? $"令牌有效期至今天 {local:HH:mm}"
+                    : $"令牌有效期至 {local:yyyy-MM-dd HH:mm}";
+            }
+        }
+        else
+        {
+            LoginExpiryLabel.Text = string.Empty;
+        }
+
+        LoginStatusFrame.IsVisible = true;
     }
 
     private bool EnsureOAuthService()

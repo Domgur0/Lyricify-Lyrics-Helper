@@ -48,6 +48,16 @@ public class SpotifyOAuthService
     public bool HasValidToken =>
         !string.IsNullOrWhiteSpace(Preferences.Get(PrefRefreshToken, null));
 
+    /// <summary>UTC time when the current access token expires, or <c>null</c> when not set.</summary>
+    public DateTimeOffset? TokenExpiresAt
+    {
+        get
+        {
+            var ts = Preferences.Get(PrefExpiresAt, 0L);
+            return ts > 0 ? DateTimeOffset.FromUnixTimeSeconds(ts) : null;
+        }
+    }
+
     // ── Credential helpers ────────────────────────────────────────────────────
 
     private string ClientId =>
