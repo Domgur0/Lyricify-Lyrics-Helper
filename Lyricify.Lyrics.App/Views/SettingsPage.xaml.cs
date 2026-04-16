@@ -5,7 +5,7 @@ namespace Lyricify.Lyrics.App.Views;
 
 public partial class SettingsPage : ContentPage
 {
-    private readonly SpotifyOAuthService _oauthService;
+    private SpotifyOAuthService? _oauthService;
 
     // Preference keys (must match those in SpotifyOAuthService)
     private const string PrefClientId = "spotify_client_id";
@@ -16,16 +16,17 @@ public partial class SettingsPage : ContentPage
     public SettingsPage()
     {
         InitializeComponent();
-        _oauthService = IPlatformApplication.Current!.Services.GetRequiredService<SpotifyOAuthService>();
     }
 
     // ── Save all Spotify credentials ──────────────────────────────────────────
 
     private async void OnSignInClicked(object sender, EventArgs e)
     {
+        if (!EnsureOAuthService()) return;
+
         try
         {
-            await _oauthService.AuthorizeAsync();
+            await _oauthService!.AuthorizeAsync();
             await DisplayAlertAsync("Signed in", "Spotify login successful.", "OK");
         }
         catch (TaskCanceledException)
@@ -76,10 +77,12 @@ public partial class SettingsPage : ContentPage
 
     private async void OnSignOutClicked(object sender, EventArgs e)
     {
+        if (!EnsureOAuthService()) return;
+
         var confirm = await DisplayAlertAsync("Sign out", "Sign out of Spotify?", "Yes", "No");
         if (!confirm) return;
 
-        _oauthService.SignOut();
+        _oauthService!.SignOut();
         Application.Current!.Windows[0].Page = new AppShell();
     }
 
@@ -107,6 +110,7 @@ public partial class SettingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        EnsureOAuthService();
 
         // Restore persisted settings.
         ClientIdEntry.Text = Preferences.Get(PrefClientId, string.Empty);
@@ -121,5 +125,17 @@ public partial class SettingsPage : ContentPage
         var spDc = Preferences.Get(PrefSpDc, string.Empty);
         if (!string.IsNullOrWhiteSpace(spDc))
             ProviderHelper.SpotifyApi.SetSpDc(spDc);
+    }
+
+    private bool EnsureOAuthService()
+    {
+        if (_oauthService is not null) return true;
+
+        var services = Handler?.MauiContext?.Services
+            ?? Application.Current?.Handler?.MauiContext?.Services
+            ?? IPlatformApplication.Current?.Services;
+        _oauthService = services?.GetService(typeof(SpotifyOAuthService)) as SpotifyOAuthService;
+
+        return _oauthService is not null;
     }
 }

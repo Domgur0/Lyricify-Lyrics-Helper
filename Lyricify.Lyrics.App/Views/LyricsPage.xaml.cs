@@ -5,7 +5,7 @@ namespace Lyricify.Lyrics.App.Views;
 
 public partial class LyricsPage : ContentPage
 {
-    private readonly LyricsViewModel _viewModel;
+    private LyricsViewModel? _viewModel;
     private int _lastScrolledLineIndex = -1;
     private CancellationTokenSource? _albumArtLongPressCts;
     private const int AlbumArtLongPressMs = 650;
@@ -13,23 +13,24 @@ public partial class LyricsPage : ContentPage
 
     /// <summary>
     /// Parameterless constructor used by MAUI Shell <c>DataTemplate</c> resolution.
-    /// Resolves <see cref="LyricsViewModel"/> from the DI container.
     /// </summary>
     public LyricsPage()
-        : this(IPlatformApplication.Current!.Services.GetRequiredService<LyricsViewModel>())
     {
+        InitializeComponent();
     }
 
     public LyricsPage(LyricsViewModel viewModel)
     {
         InitializeComponent();
-        _viewModel = viewModel;
-        BindingContext = viewModel;
+        SetViewModel(viewModel);
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        EnsureViewModel();
+        if (_viewModel is null) return;
+
         _viewModel.StartPollingCommand.Execute(null);
         OverlayToggleButton.IsVisible = DeviceInfo.Current.Platform == DevicePlatform.Android
             && Preferences.Get(PrefOverlayEnabled, false);
@@ -72,6 +73,8 @@ public partial class LyricsPage : ContentPage
 
     private void ScrollToCurrentLine()
     {
+        if (_viewModel is null) return;
+
         var idx = _viewModel.CurrentLineIndex;
         if (idx < 0 || idx == _lastScrolledLineIndex) return;
         if (_viewModel.LyricLines is not { Count: > 0 } lines) return;
@@ -133,6 +136,25 @@ public partial class LyricsPage : ContentPage
             string.Equals(i.Title, "Settings", StringComparison.OrdinalIgnoreCase));
         if (settingsTab is not null)
             shell.CurrentItem = settingsTab;
+    }
+
+    private void EnsureViewModel()
+    {
+        if (_viewModel is not null) return;
+
+        var services = Handler?.MauiContext?.Services
+            ?? Application.Current?.Handler?.MauiContext?.Services
+            ?? IPlatformApplication.Current?.Services;
+
+        var viewModel = services?.GetService(typeof(LyricsViewModel)) as LyricsViewModel;
+        if (viewModel is not null)
+            SetViewModel(viewModel);
+    }
+
+    private void SetViewModel(LyricsViewModel viewModel)
+    {
+        _viewModel = viewModel;
+        BindingContext = viewModel;
     }
 
 #if ANDROID
