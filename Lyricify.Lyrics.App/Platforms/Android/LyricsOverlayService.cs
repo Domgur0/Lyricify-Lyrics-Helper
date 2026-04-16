@@ -18,16 +18,19 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
 /// Start via <see cref="Context.StartForegroundService"/>.
 /// Stop via <see cref="Context.StopService"/>.
 /// </summary>
-[Service(Exported = false)]
+[Service(
+    Exported = false,
+    ForegroundServiceType = (global::Android.Content.PM.ForegroundService)ForegroundServiceTypeSpecialUseValue)]
 public class LyricsOverlayService : Service
 {
     private const string ChannelId = "lyricify_overlay";
     private const int NotificationId = 1001;
+    private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
     // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
     private const global::Android.Content.PM.ForegroundService ForegroundServiceTypeSpecialUse =
-        (global::Android.Content.PM.ForegroundService)0x40000000;
+        (global::Android.Content.PM.ForegroundService)ForegroundServiceTypeSpecialUseValue;
 
     private IWindowManager? _windowManager;
     private LyricsOverlayView? _overlayView;
