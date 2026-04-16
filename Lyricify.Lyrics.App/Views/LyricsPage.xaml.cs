@@ -45,6 +45,8 @@ public partial class LyricsPage : ContentPage
     {
         base.OnDisappearing();
         _albumArtLongPressCts?.Cancel();
+        _albumArtLongPressCts?.Dispose();
+        _albumArtLongPressCts = null;
 
         if (_viewModel is { } vm)
         {
@@ -102,6 +104,7 @@ public partial class LyricsPage : ContentPage
     private void OnAlbumArtPressed(object sender, EventArgs e)
     {
         _albumArtLongPressCts?.Cancel();
+        _albumArtLongPressCts?.Dispose();
         _albumArtLongPressCts = new CancellationTokenSource();
         var token = _albumArtLongPressCts.Token;
 
@@ -123,6 +126,8 @@ public partial class LyricsPage : ContentPage
     private void OnAlbumArtReleased(object sender, EventArgs e)
     {
         _albumArtLongPressCts?.Cancel();
+        _albumArtLongPressCts?.Dispose();
+        _albumArtLongPressCts = null;
     }
 
     private void OpenSettingsTab()

@@ -32,10 +32,6 @@ public partial class SettingsPage : ContentPage
         {
             await DisplayAlert("Cancelled", "Spotify login was cancelled.", "OK");
         }
-        catch (InvalidOperationException ex)
-        {
-            await DisplayAlert("Login failed", ex.Message, "OK");
-        }
         catch (Exception ex)
         {
             await DisplayAlert("Login failed", ex.Message, "OK");
