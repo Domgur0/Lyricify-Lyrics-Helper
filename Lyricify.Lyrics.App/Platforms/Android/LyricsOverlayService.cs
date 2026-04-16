@@ -5,6 +5,7 @@ using Android.OS;
 using Android.Views;
 using Lyricify.Lyrics.App.Services;
 using Lyricify.Lyrics.App.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lyricify.Lyrics.App.Platforms.Android;
 
@@ -33,20 +34,34 @@ public class LyricsOverlayService : Service
     {
         base.OnCreate();
 
+        CreateNotificationChannel();
+        StartForeground(NotificationId, BuildNotification("Lyricify is running", "Tap to open"));
+
         // Use the Service's own context (not Application.Context) to obtain WindowManager.
         // On Android 12+ (API 31+), Application.Context is not a display/window context and
         // GetSystemService(WindowService) returns null from it. The Service context has a valid
         // window token and produces a WindowManager that can add and update overlay views.
-        _windowManager = GetSystemService(WindowService) as IWindowManager
-            ?? throw new InvalidOperationException("Cannot access WindowManager.");
+        _windowManager = GetSystemService(WindowService) as IWindowManager;
+        if (_windowManager is null)
+        {
+            StopSelf();
+            return;
+        }
 
         // Resolve the shared ViewModel from the MAUI DI container.
-        _viewModel = IPlatformApplication.Current!.Services.GetRequiredService<LyricsViewModel>();
-
-        CreateNotificationChannel();
-        StartForeground(NotificationId, BuildNotification("Lyricify is running", "Tap to open"));
+        _viewModel = IPlatformApplication.Current?.Services.GetService<LyricsViewModel>();
+        if (_viewModel is null)
+        {
+            StopSelf();
+            return;
+        }
 
         ShowOverlay();
+        if (_overlayView is null)
+        {
+            StopSelf();
+            return;
+        }
 
         // Subscribe to sync updates.
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;

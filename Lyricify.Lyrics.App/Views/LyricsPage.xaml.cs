@@ -85,13 +85,24 @@ public partial class LyricsPage : ContentPage
         if (_viewModel is null) return;
 
         var idx = _viewModel.CurrentLineIndex;
-        if (idx < 0 || idx == _lastScrolledLineIndex) return;
+        if (idx < 0)
+        {
+            LyricsCollection.SelectedItem = null;
+            _lastScrolledLineIndex = -1;
+            return;
+        }
         if (_viewModel.LyricLines is not { Count: > 0 } lines) return;
         if (idx >= lines.Count) return;
 
         var item = lines[idx];
-        LyricsCollection.ScrollTo(item, position: ScrollToPosition.Center, animate: true);
-        _lastScrolledLineIndex = idx;
+        if (!ReferenceEquals(LyricsCollection.SelectedItem, item))
+            LyricsCollection.SelectedItem = item;
+
+        if (idx != _lastScrolledLineIndex)
+        {
+            LyricsCollection.ScrollTo(item, position: ScrollToPosition.Center, animate: true);
+            _lastScrolledLineIndex = idx;
+        }
     }
 
     // ── Highlight active line (simple colour approach) ────────────────────────
