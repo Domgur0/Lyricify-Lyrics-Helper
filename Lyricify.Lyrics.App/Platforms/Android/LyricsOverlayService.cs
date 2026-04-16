@@ -409,28 +409,31 @@ public class LyricsOverlayService : Service
         if (!OperatingSystem.IsAndroidVersionAtLeast(23))
             return null;
 
-        try
+        foreach (var className in new[] { "android.view.WindowManager", "android.view.IWindowManager" })
         {
-            using var windowManagerClass = Java.Lang.Class.ForName("android.view.WindowManager");
-            var serviceByClass = context.GetSystemService(windowManagerClass);
-            if (serviceByClass is IWindowManager manager)
-                return manager;
-
-            if (serviceByClass is not null)
+            try
             {
-                try
+                using var serviceClass = Java.Lang.Class.ForName(className);
+                var serviceByClass = context.GetSystemService(serviceClass);
+                if (serviceByClass is IWindowManager manager)
+                    return manager;
+
+                if (serviceByClass is not null)
                 {
-                    return serviceByClass.JavaCast<IWindowManager>();
-                }
-                catch (Exception ex)
-                {
-                    LogDiagnostic($"{sourceName} JavaCast<IWindowManager> failed for class service.", ex);
+                    try
+                    {
+                        return serviceByClass.JavaCast<IWindowManager>();
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDiagnostic($"{sourceName} JavaCast<IWindowManager> failed for class service {className}.", ex);
+                    }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            LogDiagnostic($"{sourceName} class WindowManager lookup threw.", ex);
+            catch (Exception ex)
+            {
+                LogDiagnostic($"{sourceName} class lookup threw for {className}.", ex);
+            }
         }
 
         return null;
