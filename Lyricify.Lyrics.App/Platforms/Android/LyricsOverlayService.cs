@@ -268,6 +268,7 @@ public class LyricsOverlayService : Service
             LogDiagnostic($"{sourceName} context.Display lookup failed.", ex);
         }
 
+        // Different ROMs may only expose DisplayManager from one of these contexts.
         DisplayManager? displayManager = sourceContext.GetSystemService(DisplayService) as DisplayManager;
         displayManager ??= GetSystemService(DisplayService) as DisplayManager;
         displayManager ??= ApplicationContext?.GetSystemService(DisplayService) as DisplayManager;
@@ -286,13 +287,13 @@ public class LyricsOverlayService : Service
 
         try
         {
-            Display? firstAvailable = null;
+            Display? fallbackDisplay = null;
             foreach (var display in displayManager.GetDisplays())
             {
                 if (display is null)
                     continue;
 
-                firstAvailable ??= display;
+                fallbackDisplay ??= display;
                 if (display.State != DisplayState.Off)
                 {
                     LogDiagnostic($"Resolved display from {sourceName} DisplayManager active displays.");
@@ -300,10 +301,10 @@ public class LyricsOverlayService : Service
                 }
             }
 
-            if (firstAvailable is not null)
+            if (fallbackDisplay is not null)
             {
                 LogDiagnostic($"Resolved display from {sourceName} DisplayManager first available display.");
-                return firstAvailable;
+                return fallbackDisplay;
             }
         }
         catch (Exception ex)
