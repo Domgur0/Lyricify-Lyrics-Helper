@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Graphics;
+using Android.Graphics.Drawables;
 using Android.OS;
 using Android.Text;
 using Android.Views;
@@ -20,6 +21,8 @@ internal sealed class LyricsOverlayView : LinearLayout
     private readonly TextView _lockButton;
     private readonly TextView _closeButton;
     private readonly TextView _settingsButton;
+    private LinearLayout? _colorFontRow;
+    private readonly List<FrameLayout> _colorSwatches = new();
 
     // Drag state
     private float _dragStartX;
@@ -35,8 +38,12 @@ internal sealed class LyricsOverlayView : LinearLayout
     private float _currentFontSizeSp = 17f;
     private readonly float _dragThresholdPx;
 
+    // Available color palette (hex values must stay in sync with SettingsPage swatches)
+    internal static readonly string[] PaletteHexColors = ["#E05252", "#39B4E8", "#52C57A", "#C9A84C", "#7B5CC7"];
+    internal const string DefaultActiveColorHex = "#39B4E8";
+
     // Colours
-    private static readonly global::Android.Graphics.Color ActiveColor = global::Android.Graphics.Color.ParseColor("#39B4E8");
+    private global::Android.Graphics.Color _activeColor = global::Android.Graphics.Color.ParseColor(DefaultActiveColorHex);
     private static readonly global::Android.Graphics.Color DimColor = global::Android.Graphics.Color.ParseColor("#B3FFFFFF");    // semi-transparent white
     private static readonly global::Android.Graphics.Color ControlsColor = global::Android.Graphics.Color.ParseColor("#CCFFFFFF");
 
@@ -44,6 +51,7 @@ internal sealed class LyricsOverlayView : LinearLayout
     public event Action<bool>? LockStateChanged;
     public event Action<float>? FontSizeChanged;
     public event Action<int, int>? PositionChanged;
+    public event Action<string>? ColorChanged;
 
     public LyricsOverlayView(Context context) : base(context)
     {
@@ -79,11 +87,7 @@ internal sealed class LyricsOverlayView : LinearLayout
             SetLocked(!_isLocked);
             LockStateChanged?.Invoke(_isLocked);
         };
-        _settingsButton.Click += (_, _) =>
-        {
-            CycleFontSize();
-            FontSizeChanged?.Invoke(_currentFontSizeSp);
-        };
+        _settingsButton.Click += (_, _) => ToggleColorFontRow();
         _closeButton.Click += (_, _) => CloseRequested?.Invoke();
 
         actionsRow.AddView(_lockButton);
@@ -94,7 +98,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         {
             TextSize = 16,
         };
-        _currentLineView.SetTextColor(ActiveColor);
+        _currentLineView.SetTextColor(_activeColor);
         _currentLineView.SetTypeface(null, global::Android.Graphics.TypefaceStyle.Bold);
         _currentLineView.Gravity = GravityFlags.CenterHorizontal;
         ConfigureMarquee(_currentLineView);
@@ -118,7 +122,7 @@ internal sealed class LyricsOverlayView : LinearLayout
 
         _controlsRow = new LinearLayout(context)
         {
-            Orientation = Orientation.Horizontal,
+            Orientation = Orientation.Vertical,
             Gravity = GravityFlags.CenterHorizontal,
         };
         _controlsRow.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
@@ -127,6 +131,9 @@ internal sealed class LyricsOverlayView : LinearLayout
         };
         _controlsRow.Visibility = ViewStates.Gone;
         _controlsRow.AddView(actionsRow);
+        _colorFontRow = BuildColorFontRow(context, density);
+        _colorFontRow.Visibility = ViewStates.Gone;
+        _controlsRow.AddView(_colorFontRow);
 
         AddView(lyricRow);
         AddView(_controlsRow);
@@ -161,7 +168,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         }
 
         var alpha = (int)(0x66 + (0xFF - 0x66) * lineProgress);
-        var blended = global::Android.Graphics.Color.Argb(alpha, ActiveColor.R, ActiveColor.G, ActiveColor.B);
+        var blended = global::Android.Graphics.Color.Argb(alpha, _activeColor.R, _activeColor.G, _activeColor.B);
         _currentLineView.SetTextColor(blended);
     }
 
@@ -285,6 +292,8 @@ internal sealed class LyricsOverlayView : LinearLayout
 
         _controlsVisible = !_controlsVisible;
         _controlsRow.Visibility = _controlsVisible ? ViewStates.Visible : ViewStates.Gone;
+        if (!_controlsVisible && _colorFontRow is not null)
+            _colorFontRow.Visibility = ViewStates.Gone;
     }
 
     private int GetClosestFontSizeIndex(float value)
@@ -302,9 +311,150 @@ internal sealed class LyricsOverlayView : LinearLayout
         return closestIndex;
     }
 
-    private void CycleFontSize()
+    private void ToggleColorFontRow()
     {
-        _fontSizeIndex = (_fontSizeIndex + 1) % _fontSizes.Length;
-        SetTextSizeSp(_fontSizes[_fontSizeIndex]);
+        if (_colorFontRow is null)
+            return;
+        _colorFontRow.Visibility = _colorFontRow.Visibility == ViewStates.Visible
+            ? ViewStates.Gone
+            : ViewStates.Visible;
+    }
+
+    private void IncreaseFontSize()
+    {
+        if (_fontSizeIndex < _fontSizes.Length - 1)
+        {
+            _fontSizeIndex++;
+            SetTextSizeSp(_fontSizes[_fontSizeIndex]);
+        }
+    }
+
+    private void DecreaseFontSize()
+    {
+        if (_fontSizeIndex > 0)
+        {
+            _fontSizeIndex--;
+            SetTextSizeSp(_fontSizes[_fontSizeIndex]);
+        }
+    }
+
+    /// <summary>
+    /// Applies the active color to the current lyric line and updates the swatch selection ring.
+    /// </summary>
+    public void SetActiveColor(string hexColor)
+    {
+        if (Looper.MainLooper!.Thread != Java.Lang.Thread.CurrentThread())
+        {
+            Post(() => SetActiveColor(hexColor));
+            return;
+        }
+
+        try
+        {
+            _activeColor = global::Android.Graphics.Color.ParseColor(hexColor);
+        }
+        catch
+        {
+            _activeColor = global::Android.Graphics.Color.ParseColor(DefaultActiveColorHex);
+            hexColor = DefaultActiveColorHex;
+        }
+
+        _currentLineView.SetTextColor(_activeColor);
+        UpdateColorSwatchSelection(hexColor);
+    }
+
+    private LinearLayout BuildColorFontRow(Context context, float density)
+    {
+        var row = new LinearLayout(context)
+        {
+            Orientation = Orientation.Horizontal,
+            Gravity = GravityFlags.CenterVertical,
+        };
+        row.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
+        {
+            TopMargin = (int)(6 * density),
+        };
+
+        foreach (var hex in PaletteHexColors)
+        {
+            var swatch = CreateColorSwatch(context, hex, density);
+            _colorSwatches.Add(swatch);
+            row.AddView(swatch);
+        }
+
+        // Flexible spacer pushes T+ / T- to the right
+        var spacer = new View(context);
+        spacer.LayoutParameters = new LinearLayout.LayoutParams(0, 1) { Weight = 1f };
+        row.AddView(spacer);
+
+        var tPlus = CreateIconTextButton(context, "T+");
+        tPlus.TextSize = 16;
+        tPlus.Click += (_, _) =>
+        {
+            IncreaseFontSize();
+            FontSizeChanged?.Invoke(_currentFontSizeSp);
+        };
+
+        var tMinus = CreateIconTextButton(context, "T-");
+        tMinus.TextSize = 16;
+        tMinus.Click += (_, _) =>
+        {
+            DecreaseFontSize();
+            FontSizeChanged?.Invoke(_currentFontSizeSp);
+        };
+
+        row.AddView(tPlus);
+        row.AddView(tMinus);
+
+        return row;
+    }
+
+    private FrameLayout CreateColorSwatch(Context context, string hexColor, float density)
+    {
+        var outerSize = (int)(36 * density);
+        var frame = new FrameLayout(context);
+        frame.LayoutParameters = new LinearLayout.LayoutParams(outerSize, outerSize);
+        frame.Clickable = true;
+        frame.Tag = hexColor;
+
+        var color = global::Android.Graphics.Color.ParseColor(hexColor);
+        var fillDrawable = new GradientDrawable();
+        fillDrawable.SetShape(ShapeType.Oval);
+        fillDrawable.SetColor(color);
+
+        var inner = new View(context);
+        inner.Background = fillDrawable;
+        inner.LayoutParameters = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MatchParent,
+            ViewGroup.LayoutParams.MatchParent);
+        frame.AddView(inner);
+
+        frame.Click += (_, _) =>
+        {
+            SetActiveColor(hexColor);
+            ColorChanged?.Invoke(hexColor);
+        };
+
+        return frame;
+    }
+
+    private void UpdateColorSwatchSelection(string selectedHex)
+    {
+        var density = Resources?.DisplayMetrics?.Density ?? 3f;
+        var strokePx = (int)(3 * density);
+        foreach (var swatch in _colorSwatches)
+        {
+            var hex = (string?)swatch.Tag ?? string.Empty;
+            var color = global::Android.Graphics.Color.ParseColor(hex);
+            var isSelected = string.Equals(hex, selectedHex, StringComparison.OrdinalIgnoreCase);
+
+            var drawable = new GradientDrawable();
+            drawable.SetShape(ShapeType.Oval);
+            drawable.SetColor(color);
+            if (isSelected)
+                drawable.SetStroke(strokePx, global::Android.Graphics.Color.White);
+
+            ((swatch.GetChildAt(0) as View) ?? swatch).Background = drawable;
+        }
     }
 }

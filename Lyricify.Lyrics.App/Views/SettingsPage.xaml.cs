@@ -12,6 +12,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefClientSecret = "spotify_client_secret";
     private const string PrefSpDc = "spotify_sp_dc";
     private const string PrefOverlayEnabled = "overlay_enabled";
+    private const string PrefOverlayLyricColor = "overlay_lyric_color";
 
     public SettingsPage()
     {
@@ -127,6 +128,47 @@ public partial class SettingsPage : ContentPage
 #endif
     }
 
+    // ── Floating lyrics color ─────────────────────────────────────────────────
+
+    private void OnOverlayColorSelected(object sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not string hexColor)
+            return;
+
+        Preferences.Set(PrefOverlayLyricColor, hexColor);
+        UpdateColorSwatchSelection(hexColor);
+
+#if ANDROID
+        if (Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning)
+        {
+            var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+            var intent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+            intent.SetAction(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.ActionSetColor);
+            intent.PutExtra(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.ExtraColorHex, hexColor);
+            context.StartService(intent);
+        }
+#endif
+    }
+
+    private void UpdateColorSwatchSelection(string selectedHex)
+    {
+        var swatches = new Dictionary<string, Border>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["#E05252"] = ColorSwatchRed,
+            ["#39B4E8"] = ColorSwatchBlue,
+            ["#52C57A"] = ColorSwatchGreen,
+            ["#C9A84C"] = ColorSwatchGold,
+            ["#7B5CC7"] = ColorSwatchPurple,
+        };
+
+        foreach (var (hex, swatch) in swatches)
+        {
+            swatch.Stroke = string.Equals(hex, selectedHex, StringComparison.OrdinalIgnoreCase)
+                ? Color.FromArgb("#FFFFFF")
+                : Color.FromArgb("#00000000");
+        }
+    }
+
     protected override void OnAppearing()
     {
         base.OnAppearing();
@@ -140,6 +182,7 @@ public partial class SettingsPage : ContentPage
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
         OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
+        UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, "#39B4E8"));
 
         // Re-apply sp_dc to the provider in case the app was restarted.
         var spDc = Preferences.Get(PrefSpDc, string.Empty);

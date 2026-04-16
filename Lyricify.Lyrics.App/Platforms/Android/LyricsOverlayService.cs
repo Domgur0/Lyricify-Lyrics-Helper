@@ -41,6 +41,7 @@ public class LyricsOverlayService : Service
     private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
     private const int DefaultDisplayId = 0;
+    private const string PrefOverlayLyricColor = "overlay_lyric_color";
     private const string PrefOverlayOpacity = "overlay_opacity";
     private const string PrefOverlayShouldRun = "overlay_should_run";
     private const string PrefOverlayPosX = "overlay_position_x";
@@ -49,6 +50,8 @@ public class LyricsOverlayService : Service
     private const string PrefLyricsFontSize = "lyrics_font_size";
     public const string ActionUnlockOverlay = "lyricify.overlay.action.UNLOCK";
     public const string ActionDisableOverlay = "lyricify.overlay.action.DISABLE";
+    public const string ActionSetColor = "lyricify.overlay.action.SET_COLOR";
+    public const string ExtraColorHex = "color_hex";
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
     // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
@@ -148,6 +151,14 @@ public class LyricsOverlayService : Service
     {
         switch (intent?.Action)
         {
+            case ActionSetColor:
+                var colorHex = intent?.GetStringExtra(ExtraColorHex);
+                if (!string.IsNullOrWhiteSpace(colorHex))
+                {
+                    global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLyricColor, colorHex);
+                    RunOnMainThread(() => _overlayView?.SetActiveColor(colorHex));
+                }
+                break;
             case ActionUnlockOverlay:
                 SetOverlayLocked(false);
                 break;
@@ -504,7 +515,10 @@ public class LyricsOverlayService : Service
         _overlayView.CloseRequested += OnOverlayCloseRequested;
         _overlayView.LockStateChanged += OnOverlayLockStateChanged;
         _overlayView.FontSizeChanged += OnOverlayFontSizeChanged;
+        _overlayView.ColorChanged += OnOverlayColorChanged;
         _overlayView.SetTextSizeSp(global::Microsoft.Maui.Storage.Preferences.Get(PrefLyricsFontSize, 17));
+        _overlayView.SetActiveColor(global::Microsoft.Maui.Storage.Preferences.Get(
+            PrefOverlayLyricColor, LyricsOverlayView.DefaultActiveColorHex));
         SetOverlayLocked(global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayLocked, false));
         try
         {
@@ -541,6 +555,7 @@ public class LyricsOverlayService : Service
             _overlayView.CloseRequested -= OnOverlayCloseRequested;
             _overlayView.LockStateChanged -= OnOverlayLockStateChanged;
             _overlayView.FontSizeChanged -= OnOverlayFontSizeChanged;
+            _overlayView.ColorChanged -= OnOverlayColorChanged;
             _windowManager.RemoveView(_overlayView);
         }
         catch
@@ -606,6 +621,11 @@ public class LyricsOverlayService : Service
     {
         global::Microsoft.Maui.Storage.Preferences.Set(PrefLyricsFontSize, size);
         _overlayView?.SetTextSizeSp(size);
+    }
+
+    private void OnOverlayColorChanged(string hexColor)
+    {
+        global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLyricColor, hexColor);
     }
 
     private void SetOverlayLocked(bool isLocked)
