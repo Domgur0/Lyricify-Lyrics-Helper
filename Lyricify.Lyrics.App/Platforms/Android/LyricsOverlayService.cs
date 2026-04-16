@@ -26,7 +26,8 @@ public class LyricsOverlayService : Service
 
     // Android 14+ (API 34) requires the service type to be passed to StartForeground.
     // Value matches ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE and the manifest declaration.
-    private const int ForegroundServiceTypeSpecialUse = 0x40000000;
+    private const global::Android.Content.PM.ForegroundService ForegroundServiceTypeSpecialUse =
+        (global::Android.Content.PM.ForegroundService)0x40000000;
 
     private IWindowManager? _windowManager;
     private LyricsOverlayView? _overlayView;
