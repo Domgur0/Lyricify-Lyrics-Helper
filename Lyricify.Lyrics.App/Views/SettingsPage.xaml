@@ -176,6 +176,27 @@
                     <Label Text="Lyrics provided by Spotify and LRCLIB" TextColor="{StaticResource InactiveLineColor}" FontSize="12" />
                 </VerticalStackLayout>
             </Border>
+
+            <!-- ── Diagnostics ───────────────────────────────────────────── -->
+            <Label Text="Diagnostics" TextColor="White" FontSize="18" FontAttributes="Bold" />
+            <Border Background="#1A1A1A" Stroke="#333333" Padding="16">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+                    <Label
+                        Text="Exports warnings and errors captured since the last launch."
+                        TextColor="{StaticResource InactiveLineColor}"
+                        FontSize="12" />
+                    <Button
+                        Text="Export Log"
+                        BackgroundColor="#333333"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnExportLogClicked" />
+                </VerticalStackLayout>
+            </Border>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
