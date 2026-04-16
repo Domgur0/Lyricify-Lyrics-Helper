@@ -25,6 +25,11 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
     ForegroundServiceType = (global::Android.Content.PM.ForegroundService)ForegroundServiceTypeSpecialUseValue)]
 public class LyricsOverlayService : Service
 {
+    /// <summary>
+    /// Bundles a resolved WindowManager with the exact context it came from.
+    /// When <see cref="OwnsContext"/> is true, the context was created by this service
+    /// (via CreateWindowContext) and must be disposed in <see cref="OnDestroy"/>.
+    /// </summary>
     private readonly record struct WindowBinding(Context Context, IWindowManager WindowManager, bool OwnsContext);
 
     private const string LogTag = "LyricifyOverlay";
@@ -129,7 +134,10 @@ public class LyricsOverlayService : Service
         if (_windowContext is not null && _ownsWindowContext)
         {
             try { _windowContext.Dispose(); }
-            catch { /* ignore dispose failures */ }
+            catch (Exception ex)
+            {
+                Log.Debug(LogTag, $"Window context dispose failed: {ex.Message}");
+            }
         }
         _windowContext = null;
         _ownsWindowContext = false;
