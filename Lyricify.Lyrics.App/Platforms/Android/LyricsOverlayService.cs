@@ -72,11 +72,9 @@ public class LyricsOverlayService : Service
         else
             StartForeground(NotificationId, notification);
 
-        // Use the Service's own context (not Application.Context) to obtain WindowManager.
-        // On Android 12+ (API 31+), Application.Context is not a display/window context and
-        // GetSystemService(WindowService) returns null from it. The Service context has a valid
-        // window token and produces a WindowManager that can add and update overlay views.
-        _windowManager = GetSystemService(WindowService) as IWindowManager;
+        // Resolve WindowManager from the best available runtime context.
+        // Some devices/ROMs may return null for one context but not others.
+        _windowManager = ResolveWindowManager();
         if (_windowManager is null)
         {
             FailAndStop("无法获取 WindowManager，请重启应用");
@@ -122,6 +120,21 @@ public class LyricsOverlayService : Service
 
         RemoveOverlay();
         base.OnDestroy();
+    }
+
+    private IWindowManager? ResolveWindowManager()
+    {
+        if (GetSystemService(WindowService) is IWindowManager fromServiceContext)
+            return fromServiceContext;
+
+        var currentActivity = global::Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+        if (currentActivity?.GetSystemService(WindowService) is IWindowManager fromActivityContext)
+            return fromActivityContext;
+
+        if (ApplicationContext?.GetSystemService(WindowService) is IWindowManager fromAppContext)
+            return fromAppContext;
+
+        return null;
     }
 
     // ── Overlay management ────────────────────────────────────────────────────
