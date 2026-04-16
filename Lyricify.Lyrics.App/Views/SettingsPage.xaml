@@ -56,6 +56,14 @@
                         HorizontalTextAlignment="Center" />
 
                     <Button
+                        Text="Sign in to Spotify"
+                        BackgroundColor="{StaticResource ActiveLineColor}"
+                        TextColor="Black"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnSignInClicked" />
+
+                    <Button
                         Text="Save Credentials"
                         BackgroundColor="{StaticResource ActiveLineColor}"
                         TextColor="Black"
@@ -109,6 +117,21 @@
                         MinimumTrackColor="{StaticResource ActiveLineColor}"
                         ValueChanged="OnOverlayOpacityChanged"
                         IsVisible="{OnPlatform Default=False, Android=True}" />
+
+                    <Grid
+                        ColumnDefinitions="*,Auto"
+                        IsVisible="{OnPlatform Default=False, Android=True}">
+                        <Label
+                            Text="Enable floating desktop lyrics"
+                            TextColor="{StaticResource InactiveLineColor}"
+                            FontSize="13"
+                            VerticalOptions="Center" />
+                        <Switch
+                            x:Name="OverlayEnabledSwitch"
+                            Grid.Column="1"
+                            Toggled="OnOverlayEnabledToggled"
+                            OnColor="{StaticResource ActiveLineColor}" />
+                    </Grid>
                 </VerticalStackLayout>
             </Frame>
 

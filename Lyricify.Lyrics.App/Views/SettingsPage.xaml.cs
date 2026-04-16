@@ -11,6 +11,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefClientId = "spotify_client_id";
     private const string PrefClientSecret = "spotify_client_secret";
     private const string PrefSpDc = "spotify_sp_dc";
+    private const string PrefOverlayEnabled = "overlay_enabled";
 
     public SettingsPage()
     {
@@ -19,6 +20,27 @@ public partial class SettingsPage : ContentPage
     }
 
     // ── Save all Spotify credentials ──────────────────────────────────────────
+
+    private async void OnSignInClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            await _oauthService.AuthorizeAsync();
+            await DisplayAlert("Signed in", "Spotify login successful.", "OK");
+        }
+        catch (TaskCanceledException)
+        {
+            await DisplayAlert("Cancelled", "Spotify login was cancelled.", "OK");
+        }
+        catch (InvalidOperationException ex)
+        {
+            await DisplayAlert("Login failed", ex.Message, "OK");
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Login failed", ex.Message, "OK");
+        }
+    }
 
     private async void OnSaveCredentialsClicked(object sender, EventArgs e)
     {
@@ -81,6 +103,11 @@ public partial class SettingsPage : ContentPage
         Preferences.Set("overlay_opacity", (float)e.NewValue);
     }
 
+    private void OnOverlayEnabledToggled(object sender, ToggledEventArgs e)
+    {
+        Preferences.Set(PrefOverlayEnabled, e.Value);
+    }
+
     protected override void OnAppearing()
     {
         base.OnAppearing();
@@ -92,6 +119,7 @@ public partial class SettingsPage : ContentPage
 
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
+        OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
 
         // Re-apply sp_dc to the provider in case the app was restarted.
         var spDc = Preferences.Get(PrefSpDc, string.Empty);

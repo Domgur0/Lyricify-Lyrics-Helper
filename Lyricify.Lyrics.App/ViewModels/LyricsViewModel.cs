@@ -27,6 +27,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     private string _artistName = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AlbumArtSource))]
     private string _albumArtUrl = string.Empty;
 
     [ObservableProperty]
@@ -58,6 +59,10 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(ShowNotPlayingHint))]
     private bool _isLoadingLyrics;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
+    private string _lyricsStatusMessage = string.Empty;
+
     /// <summary>
     /// True when lyrics were loaded for the current track.
     /// </summary>
@@ -84,6 +89,14 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool ShowNoLyricsHint => IsTrackLoaded && !HasLyrics && !IsLoadingLyrics;
 
+    /// <summary>
+    /// Album art shown in the header; falls back to a blank placeholder when idle.
+    /// </summary>
+    public ImageSource AlbumArtSource =>
+        string.IsNullOrWhiteSpace(AlbumArtUrl) ? "music_note.png" : AlbumArtUrl;
+
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(LyricsStatusMessage);
+
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public LyricsViewModel(
@@ -99,7 +112,13 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
 
         _nowPlayingService.TrackChanged += OnTrackChanged;
         _nowPlayingService.StateUpdated += OnStateUpdated;
+        _nowPlayingService.AuthenticationFailed += OnAuthenticationFailed;
         _syncService.SyncResultUpdated += OnSyncResultUpdated;
+
+        if (!_oauthService.HasValidToken)
+            LyricsStatusMessage = "未登录，请长按封面进入设置登录";
+        else
+            LyricsStatusMessage = "未播放音乐";
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
@@ -132,6 +151,9 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
             HasLyrics = false;
             IsTrackLoaded = false;
             _syncService.SetLyrics(null);
+            LyricsStatusMessage = _oauthService.HasValidToken
+                ? "未播放音乐"
+                : "未登录，请长按封面进入设置登录";
             return;
         }
 
@@ -144,6 +166,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
 
         IsLoadingLyrics = true;
         HasLyrics = false;
+        LyricsStatusMessage = string.Empty;
 
         try
         {
@@ -156,6 +179,8 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
             LyricLines = lyricsData?.Lines ?? new List<ILineInfo>();
             HasLyrics = LyricLines.Count > 0;
             _syncService.SetLyrics(lyricsData);
+            if (!HasLyrics)
+                LyricsStatusMessage = "未获取到歌词";
         }
         finally
         {
@@ -167,6 +192,22 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     {
         IsPlaying = state.IsPlaying;
         _syncService.UpdatePosition(state.PositionMs, state.IsPlaying);
+    }
+
+    private void OnAuthenticationFailed(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            TrackTitle = string.Empty;
+            ArtistName = string.Empty;
+            AlbumArtUrl = string.Empty;
+            LyricLines = new();
+            HasLyrics = false;
+            IsTrackLoaded = false;
+            IsLoadingLyrics = false;
+            LyricsStatusMessage = "未登录，请长按封面进入设置登录";
+            _syncService.SetLyrics(null);
+        });
     }
 
     private void OnSyncResultUpdated(object? sender, SyncResult result)
@@ -191,6 +232,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     {
         _nowPlayingService.TrackChanged -= OnTrackChanged;
         _nowPlayingService.StateUpdated -= OnStateUpdated;
+        _nowPlayingService.AuthenticationFailed -= OnAuthenticationFailed;
         _syncService.SyncResultUpdated -= OnSyncResultUpdated;
     }
 }

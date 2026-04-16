@@ -32,6 +32,11 @@ public class SpotifyNowPlayingService : IDisposable
     /// <summary>Raised on every successful poll (even if the same track is playing).</summary>
     public event EventHandler<NowPlayingState>? StateUpdated;
 
+    /// <summary>
+    /// Raised when auth is invalid/expired and playback polling can no longer continue.
+    /// </summary>
+    public event EventHandler? AuthenticationFailed;
+
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public SpotifyNowPlayingService(SpotifyOAuthService oauthService)
@@ -90,6 +95,7 @@ public class SpotifyNowPlayingService : IDisposable
             {
                 // Token expired and refresh failed – stop polling and surface the error.
                 Stop();
+                AuthenticationFailed?.Invoke(this, EventArgs.Empty);
                 return;
             }
             catch (Exception)
