@@ -82,6 +82,7 @@
             </Grid>
 
             <Label
+                x:Name="StatusMessageLabel"
                 Text="{Binding LyricsStatusMessage}"
                 IsVisible="{Binding HasStatusMessage}"
                 TextColor="{StaticResource InactiveLineColor}"

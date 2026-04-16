@@ -33,7 +33,12 @@ public partial class LyricsPage : ContentPage
     {
         base.OnAppearing();
         EnsureViewModel();
-        if (_viewModel is null) return;
+        if (_viewModel is null)
+        {
+            StatusMessageLabel.Text = "页面初始化失败，请重启应用";
+            StatusMessageLabel.IsVisible = true;
+            return;
+        }
 
         _viewModel.StartPollingCommand.Execute(null);
         OverlayToggleButton.IsVisible = DeviceInfo.Current.Platform == DevicePlatform.Android
