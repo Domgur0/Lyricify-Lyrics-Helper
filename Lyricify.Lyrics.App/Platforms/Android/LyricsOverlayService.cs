@@ -122,6 +122,11 @@ public class LyricsOverlayService : Service
         base.OnDestroy();
     }
 
+    /// <summary>
+    /// Resolves <see cref="IWindowManager"/> from service-related contexts.
+    /// Service context is preferred; BaseContext/ApplicationContext are best-effort fallbacks
+    /// for vendor ROMs where one specific context may return null.
+    /// </summary>
     private IWindowManager? ResolveWindowManager()
     {
         if (GetSystemService(WindowService) is IWindowManager fromServiceContext)
