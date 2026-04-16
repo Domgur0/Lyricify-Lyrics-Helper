@@ -26,7 +26,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<LyricsSyncService>();
 
         // ── ViewModels ────────────────────────────────────────────────────────
-        builder.Services.AddTransient<LyricsViewModel>();
+        builder.Services.AddSingleton<LyricsViewModel>();
 
         // ── Views ─────────────────────────────────────────────────────────────
         builder.Services.AddTransient<LoginPage>();

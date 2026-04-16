@@ -63,7 +63,9 @@ public class LyricsOverlayService : Service
         }
 
         // Resolve the shared ViewModel from the MAUI DI container.
-        _viewModel = IPlatformApplication.Current?.Services.GetService<LyricsViewModel>();
+        var services = IPlatformApplication.Current?.Services
+            ?? (Application.Context as global::Microsoft.Maui.MauiApplication)?.Services;
+        _viewModel = services?.GetService<LyricsViewModel>();
         if (_viewModel is null)
         {
             StopSelf();
@@ -80,6 +82,7 @@ public class LyricsOverlayService : Service
 
         // Subscribe to sync updates.
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        UpdateOverlayFromViewModel();
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -153,6 +156,7 @@ public class LyricsOverlayService : Service
         switch (e.PropertyName)
         {
             case nameof(LyricsViewModel.CurrentLineText):
+            case nameof(LyricsViewModel.NextLineText):
                 _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
                 break;
 
@@ -169,6 +173,13 @@ public class LyricsOverlayService : Service
                 manager?.Notify(NotificationId, notification);
                 break;
         }
+    }
+
+    private void UpdateOverlayFromViewModel()
+    {
+        if (_overlayView is null || _viewModel is null) return;
+        _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
+        _overlayView.UpdateProgress(_viewModel.LineProgress);
     }
 
     // ── Notification helpers ──────────────────────────────────────────────────
