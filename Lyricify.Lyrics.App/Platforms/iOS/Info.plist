@@ -20,6 +20,19 @@
     <key>MinimumOSVersion</key>
     <string>15.0</string>
 
+    <!-- Explicit orientations to avoid iOS build-time warning -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
     <!-- Redirect URI: lyricify://callback
          MAUI WebAuthenticator intercepts this custom scheme after Spotify redirects.
          The scheme must also be listed in CFBundleURLTypes below. -->

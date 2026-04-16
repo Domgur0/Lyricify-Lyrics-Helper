@@ -85,7 +85,7 @@ public class LyricsOverlayService : Service
 
         // Resolve the shared ViewModel from the MAUI DI container.
         var services = IPlatformApplication.Current?.Services
-            ?? (this.Application as global::Microsoft.Maui.MauiApplication)?.Services;
+            ?? global::Microsoft.Maui.Controls.Application.Current?.Handler?.MauiContext?.Services;
         _viewModel = services?.GetService<LyricsViewModel>();
         if (_viewModel is null)
         {
@@ -178,7 +178,7 @@ public class LyricsOverlayService : Service
             _overlayView = null;
             return "悬浮窗创建失败：缺少悬浮窗权限，请在设置中授予";
         }
-        catch (Android.Views.WindowManagerBadTokenException ex)
+        catch (global::Android.Views.WindowManagerBadTokenException ex)
         {
             Log.Warn(LogTag, $"Failed to add overlay view: invalid window token. {ex.Message}");
             _overlayView = null;
@@ -262,7 +262,10 @@ public class LyricsOverlayService : Service
     {
         Log.Warn(LogTag, reason);
         LastStartupError = reason;
-        StopForeground(StopForegroundFlags.Remove);
+        if (OperatingSystem.IsAndroidVersionAtLeast(24))
+            StopForeground(StopForegroundFlags.Remove);
+        else
+            StopForeground(true);
 
         // Post a persistent error notification so the user can see the reason
         // even after navigating away from the app.
