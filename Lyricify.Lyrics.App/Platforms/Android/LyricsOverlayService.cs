@@ -33,7 +33,11 @@ public class LyricsOverlayService : Service
     {
         base.OnCreate();
 
-        _windowManager = global::Android.App.Application.Context.GetSystemService(WindowService) as IWindowManager
+        // Use the Service's own context (not Application.Context) to obtain WindowManager.
+        // On Android 12+ (API 31+), Application.Context is not a display/window context and
+        // GetSystemService(WindowService) returns null from it. The Service context has a valid
+        // window token and produces a WindowManager that can add and update overlay views.
+        _windowManager = GetSystemService(WindowService) as IWindowManager
             ?? throw new InvalidOperationException("Cannot access WindowManager.");
 
         // Resolve the shared ViewModel from the MAUI DI container.
@@ -68,7 +72,10 @@ public class LyricsOverlayService : Service
     {
         if (_overlayView is not null || _windowManager is null) return;
 
-        var ctx = global::Android.App.Application.Context;
+        // Use the Service context so the view shares the same window token as the
+        // WindowManager obtained above; using Application.Context here would cause a
+        // context/token mismatch when UpdateViewLayout is called on Android 12+.
+        var ctx = this;
         _overlayView = new LyricsOverlayView(ctx);
 
         var density = ctx.Resources!.DisplayMetrics!.Density;

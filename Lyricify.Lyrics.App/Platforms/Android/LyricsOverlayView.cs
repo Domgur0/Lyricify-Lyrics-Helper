@@ -129,7 +129,15 @@ internal sealed class LyricsOverlayView : LinearLayout
             case MotionEventActions.Move:
                 _layoutParams.X = _initialWindowX + (int)(e.RawX - _dragStartX);
                 _layoutParams.Y = _initialWindowY + (int)(e.RawY - _dragStartY);
-                _windowManager.UpdateViewLayout(this, _layoutParams);
+                try
+                {
+                    _windowManager.UpdateViewLayout(this, _layoutParams);
+                }
+                catch (Exception)
+                {
+                    // View may have been removed from the window while a drag was in progress.
+                    // Swallow the exception so the overlay does not crash the app on touch.
+                }
                 return true;
         }
 
