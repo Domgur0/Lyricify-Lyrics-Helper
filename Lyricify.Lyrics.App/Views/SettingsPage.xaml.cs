@@ -146,9 +146,18 @@ public partial class SettingsPage : ContentPage
         if (expiry is { } dt)
         {
             var diff = dt - DateTimeOffset.UtcNow;
-            LoginExpiryLabel.Text = diff > TimeSpan.Zero
-                ? $"令牌有效期至本地时间 {dt.LocalDateTime:HH:mm}"
-                : "令牌已过期，将在下次请求时自动刷新";
+            if (diff <= TimeSpan.Zero)
+            {
+                LoginExpiryLabel.Text = "令牌已过期，将在下次请求时自动刷新";
+            }
+            else
+            {
+                var local = dt.LocalDateTime;
+                var isSameDay = local.Date == DateTime.Today;
+                LoginExpiryLabel.Text = isSameDay
+                    ? $"令牌有效期至今天 {local:HH:mm}"
+                    : $"令牌有效期至 {local:yyyy-MM-dd HH:mm}";
+            }
         }
         else
         {

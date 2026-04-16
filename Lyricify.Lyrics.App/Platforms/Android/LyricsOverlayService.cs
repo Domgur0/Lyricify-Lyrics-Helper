@@ -105,14 +105,7 @@ public class LyricsOverlayService : Service
         UpdateOverlayFromViewModel();
 
         // Notify page and other observers that startup succeeded (on main thread).
-        global::Android.OS.Handler? mainHandler = null;
-        try { mainHandler = new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper!); }
-        catch { /* ignore */ }
-
-        if (mainHandler is not null)
-            mainHandler.Post(() => OverlayStartResult?.Invoke(null));
-        else
-            OverlayStartResult?.Invoke(null);
+        RunOnMainThread(() => OverlayStartResult?.Invoke(null));
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -177,19 +170,19 @@ public class LyricsOverlayService : Service
         {
             Log.Warn(LogTag, $"Failed to add overlay view: illegal state. {ex.Message}");
             _overlayView = null;
-            return $"悬浮窗创建失败：窗口状态异常 ({ex.Message})";
+            return "悬浮窗创建失败：窗口状态异常，请重试";
         }
         catch (Java.Lang.SecurityException ex)
         {
             Log.Warn(LogTag, $"Failed to add overlay view: missing overlay permission. {ex.Message}");
             _overlayView = null;
-            return $"悬浮窗创建失败：缺少悬浮窗权限 ({ex.Message})";
+            return "悬浮窗创建失败：缺少悬浮窗权限，请在设置中授予";
         }
         catch (Android.Views.WindowManagerBadTokenException ex)
         {
             Log.Warn(LogTag, $"Failed to add overlay view: invalid window token. {ex.Message}");
             _overlayView = null;
-            return $"悬浮窗创建失败：窗口令牌无效 ({ex.Message})";
+            return "悬浮窗创建失败：窗口令牌无效，请重启应用";
         }
     }
 
@@ -242,6 +235,22 @@ public class LyricsOverlayService : Service
         _overlayView.UpdateProgress(_viewModel.LineProgress);
     }
 
+    /// <summary>
+    /// Invokes <paramref name="action"/> on the Android main thread.
+    /// Falls back to a direct call when the main looper is unavailable.
+    /// </summary>
+    private static void RunOnMainThread(Action action)
+    {
+        global::Android.OS.Handler? mainHandler = null;
+        try { mainHandler = new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper!); }
+        catch { /* ignore */ }
+
+        if (mainHandler is not null)
+            mainHandler.Post(action);
+        else
+            action();
+    }
+
     // ── Failure helpers ───────────────────────────────────────────────────────
 
     /// <summary>
@@ -260,14 +269,7 @@ public class LyricsOverlayService : Service
         PostErrorNotification(reason);
 
         // Notify any subscribed UI on the main thread.
-        global::Android.OS.Handler? mainHandler = null;
-        try { mainHandler = new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper!); }
-        catch { /* ignore */ }
-
-        if (mainHandler is not null)
-            mainHandler.Post(() => OverlayStartResult?.Invoke(reason));
-        else
-            OverlayStartResult?.Invoke(reason);
+        RunOnMainThread(() => OverlayStartResult?.Invoke(reason));
 
         StopSelf();
     }
