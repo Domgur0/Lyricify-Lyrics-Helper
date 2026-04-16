@@ -18,7 +18,7 @@ public partial class LoginPage : ContentPage
         {
             CredentialsMissingFrame.IsVisible = true;
             LoginButton.IsEnabled = false;
-            ShowError("服务初始化中，请稍后重试。");
+            ShowError("Service initializing, please try again later.");
             return;
         }
 
@@ -32,7 +32,7 @@ public partial class LoginPage : ContentPage
     {
         if (!EnsureOAuthService())
         {
-            ShowError("服务初始化中，请稍后重试。");
+            ShowError("Service initializing, please try again later.");
             return;
         }
 
