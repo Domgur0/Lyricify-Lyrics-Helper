@@ -2,6 +2,7 @@ using Android.App;
 using Android.Content;
 using Android.Graphics.Drawables;
 using Android.OS;
+using Android.Util;
 using Android.Views;
 using Lyricify.Lyrics.App.Services;
 using Lyricify.Lyrics.App.ViewModels;
@@ -23,6 +24,7 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
     ForegroundServiceType = (global::Android.Content.PM.ForegroundService)ForegroundServiceTypeSpecialUseValue)]
 public class LyricsOverlayService : Service
 {
+    private const string LogTag = "LyricifyOverlay";
     private const string ChannelId = "lyricify_overlay";
     private const int NotificationId = 1001;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
@@ -141,14 +143,17 @@ public class LyricsOverlayService : Service
         }
         catch (Java.Lang.IllegalStateException)
         {
+            Log.Warn(LogTag, "Failed to add overlay view: illegal state.");
             _overlayView = null;
         }
         catch (Java.Lang.SecurityException)
         {
+            Log.Warn(LogTag, "Failed to add overlay view: missing overlay permission.");
             _overlayView = null;
         }
         catch (Android.Views.WindowManagerBadTokenException)
         {
+            Log.Warn(LogTag, "Failed to add overlay view: invalid window token.");
             _overlayView = null;
         }
     }

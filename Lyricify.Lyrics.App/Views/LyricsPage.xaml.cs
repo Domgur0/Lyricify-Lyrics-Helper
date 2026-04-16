@@ -192,6 +192,7 @@ public partial class LyricsPage : ContentPage
 
     private const string OverlayButtonTextShow = "🪟  Show floating lyrics";
     private const string OverlayButtonTextHide = "🪟  Hide floating lyrics";
+    private const string OverlayPermissionHint = "请授予悬浮窗权限后再次点击按钮";
 
 #pragma warning disable CA1416 // Validate platform compatibility
     private void ToggleAndroidOverlay(object sender)
@@ -209,7 +210,7 @@ public partial class LyricsPage : ContentPage
                     Android.Net.Uri.Parse($"package:{context.PackageName}"));
                 context.StartActivity(intent);
                 _retryOverlayStartAfterPermission = true;
-                StatusMessageLabel.Text = "请授予悬浮窗权限后再次点击按钮";
+                StatusMessageLabel.Text = OverlayPermissionHint;
                 StatusMessageLabel.IsVisible = true;
                 return;
             }
