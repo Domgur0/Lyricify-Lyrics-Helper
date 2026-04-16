@@ -59,14 +59,23 @@ jobs:
 
       - name: Set Xcode version
         run: |
-          # Find the latest Xcode version installed on the runner
-          XCODE_ROOT=$(ls -d /Applications/Xcode_*.app 2>/dev/null \
-            | sed 's|.*/Xcode_||;s|\.app||' \
-            | sort -t. -k1,1n -k2,2n -k3,3n \
-            | tail -1 \
-            | xargs -I{} echo "/Applications/Xcode_{}.app")
-          if [ -z "$XCODE_ROOT" ] || [ ! -d "$XCODE_ROOT" ]; then
-            XCODE_ROOT=$(xcode-select -p 2>/dev/null | sed 's|/Contents/Developer||')
+          XCODE_ROOT=""
+          # Prefer the highest-versioned installed Xcode that has a valid MacOSX.sdk.
+          while IFS= read -r CANDIDATE; do
+            [ -z "$CANDIDATE" ] && continue
+            if [ -d "$CANDIDATE/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
+              XCODE_ROOT="$CANDIDATE"
+              break
+            fi
+          done < <(
+            ls -d /Applications/Xcode_*.app 2>/dev/null \
+              | sort -V -r
+          )
+          if [ -z "$XCODE_ROOT" ]; then
+            CANDIDATE=$(xcode-select -p 2>/dev/null | sed 's|/Contents/Developer||')
+            if [ -d "$CANDIDATE/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
+              XCODE_ROOT="$CANDIDATE"
+            fi
           fi
           if [ -z "$XCODE_ROOT" ] || [ ! -d "$XCODE_ROOT" ]; then
             echo "::error::No Xcode installation found"
