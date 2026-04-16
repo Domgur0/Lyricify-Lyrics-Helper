@@ -35,12 +35,14 @@ public class LyricsOverlayService : Service
     private IWindowManager? _windowManager;
     private LyricsOverlayView? _overlayView;
     private LyricsViewModel? _viewModel;
+    public static bool IsRunning { get; private set; }
 
     // ── Service lifecycle ─────────────────────────────────────────────────────
 
     public override void OnCreate()
     {
         base.OnCreate();
+        IsRunning = true;
 
         // Start in foreground immediately to satisfy the StartForegroundService contract.
         CreateNotificationChannel();
@@ -92,6 +94,8 @@ public class LyricsOverlayService : Service
 
     public override void OnDestroy()
     {
+        IsRunning = false;
+
         if (_viewModel is not null)
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
 
@@ -104,6 +108,7 @@ public class LyricsOverlayService : Service
     private void ShowOverlay()
     {
         if (_overlayView is not null || _windowManager is null) return;
+        if (!global::Android.Provider.Settings.CanDrawOverlays(this)) return;
 
         // Use the Service context so the view shares the same window token as the
         // WindowManager obtained above; using Application.Context here would cause a
@@ -130,7 +135,22 @@ public class LyricsOverlayService : Service
         };
 
         _overlayView.SetWindowContext(_windowManager, layoutParams);
-        _windowManager.AddView(_overlayView, layoutParams);
+        try
+        {
+            _windowManager.AddView(_overlayView, layoutParams);
+        }
+        catch (Java.Lang.IllegalStateException)
+        {
+            _overlayView = null;
+        }
+        catch (Java.Lang.SecurityException)
+        {
+            _overlayView = null;
+        }
+        catch (Android.Views.WindowManagerBadTokenException)
+        {
+            _overlayView = null;
+        }
     }
 
     private void RemoveOverlay()

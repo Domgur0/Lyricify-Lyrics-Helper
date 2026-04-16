@@ -43,6 +43,15 @@ public partial class LyricsPage : ContentPage
         _viewModel.StartPollingCommand.Execute(null);
         OverlayToggleButton.IsVisible = DeviceInfo.Current.Platform == DevicePlatform.Android
             && Preferences.Get(PrefOverlayEnabled, false);
+#if ANDROID
+        _overlayRunning = Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning;
+        OverlayToggleButton.Text = _overlayRunning ? OverlayButtonTextHide : OverlayButtonTextShow;
+        if (_retryOverlayStartAfterPermission && Android.Provider.Settings.CanDrawOverlays(Platform.CurrentActivity))
+        {
+            _retryOverlayStartAfterPermission = false;
+            StartAndroidOverlay();
+        }
+#endif
 
         // Subscribe to sync updates to drive live highlighting and auto-scroll.
         if (_viewModel is { } vm)
@@ -179,6 +188,7 @@ public partial class LyricsPage : ContentPage
 
 #if ANDROID
     private bool _overlayRunning;
+    private bool _retryOverlayStartAfterPermission;
 
     private const string OverlayButtonTextShow = "🪟  Show floating lyrics";
     private const string OverlayButtonTextHide = "🪟  Hide floating lyrics";
@@ -198,25 +208,13 @@ public partial class LyricsPage : ContentPage
                     Android.Provider.Settings.ActionManageOverlayPermission,
                     Android.Net.Uri.Parse($"package:{context.PackageName}"));
                 context.StartActivity(intent);
+                _retryOverlayStartAfterPermission = true;
                 StatusMessageLabel.Text = "请授予悬浮窗权限后再次点击按钮";
                 StatusMessageLabel.IsVisible = true;
                 return;
             }
 
-            var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
-            try
-            {
-                context.StartForegroundService(serviceIntent);
-                _overlayRunning = true;
-                (sender as Button)!.Text = OverlayButtonTextHide;
-                StatusMessageLabel.IsVisible = false;
-            }
-            catch (Exception ex)
-            {
-                _overlayRunning = false;
-                StatusMessageLabel.Text = $"启动悬浮窗失败：{ex.Message}";
-                StatusMessageLabel.IsVisible = true;
-            }
+            StartAndroidOverlay();
         }
         else
         {
@@ -224,6 +222,28 @@ public partial class LyricsPage : ContentPage
             context.StopService(serviceIntent);
             _overlayRunning = false;
             (sender as Button)!.Text = OverlayButtonTextShow;
+        }
+    }
+
+    private void StartAndroidOverlay()
+    {
+        var context = Platform.CurrentActivity
+            ?? throw new InvalidOperationException("No current Android activity.");
+
+        var serviceIntent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+        try
+        {
+            context.StartForegroundService(serviceIntent);
+            _overlayRunning = true;
+            OverlayToggleButton.Text = OverlayButtonTextHide;
+            StatusMessageLabel.IsVisible = false;
+        }
+        catch (Exception ex)
+        {
+            _overlayRunning = false;
+            OverlayToggleButton.Text = OverlayButtonTextShow;
+            StatusMessageLabel.Text = $"启动悬浮窗失败：{ex.Message}";
+            StatusMessageLabel.IsVisible = true;
         }
     }
 #pragma warning restore CA1416
