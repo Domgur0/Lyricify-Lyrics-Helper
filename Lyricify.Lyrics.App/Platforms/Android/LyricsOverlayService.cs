@@ -192,7 +192,7 @@ public class LyricsOverlayService : Service
 
         try
         {
-            var windowContext = sourceContext.CreateWindowContext(WindowManagerTypes.ApplicationOverlay, null);
+            var windowContext = sourceContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
             if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
                 return new WindowBinding(windowContext, manager, true);
 
