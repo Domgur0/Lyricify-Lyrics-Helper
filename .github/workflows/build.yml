@@ -60,10 +60,12 @@ jobs:
       - name: Set Xcode version
         run: |
           XCODE_ROOT=""
-          # Prefer the highest-versioned installed Xcode that has a valid MacOSX.sdk.
+          # Prefer the highest-versioned installed Xcode that can resolve both macOS SDK and actool.
           while IFS= read -r CANDIDATE; do
             [ -z "$CANDIDATE" ] && continue
-            if [ -d "$CANDIDATE/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
+            DEVELOPER_DIR="$CANDIDATE/Contents/Developer"
+            if [ -d "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ] \
+              && DEVELOPER_DIR="$DEVELOPER_DIR" xcrun --sdk macosx --find actool >/dev/null 2>&1; then
               XCODE_ROOT="$CANDIDATE"
               break
             fi
@@ -73,7 +75,9 @@ jobs:
           )
           if [ -z "$XCODE_ROOT" ]; then
             CANDIDATE=$(xcode-select -p 2>/dev/null | sed 's|/Contents/Developer||')
-            if [ -d "$CANDIDATE/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ]; then
+            DEVELOPER_DIR="$CANDIDATE/Contents/Developer"
+            if [ -d "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" ] \
+              && DEVELOPER_DIR="$DEVELOPER_DIR" xcrun --sdk macosx --find actool >/dev/null 2>&1; then
               XCODE_ROOT="$CANDIDATE"
             fi
           fi

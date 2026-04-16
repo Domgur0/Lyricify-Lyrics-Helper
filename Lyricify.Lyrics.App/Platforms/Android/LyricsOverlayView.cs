@@ -1,6 +1,7 @@
 using Android.Content;
 using Android.Graphics;
 using Android.OS;
+using Android.Text;
 using Android.Views;
 using Android.Widget;
 using Lyricify.Lyrics.Models;
