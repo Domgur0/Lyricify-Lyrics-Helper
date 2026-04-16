@@ -136,7 +136,7 @@ public class LyricsOverlayService : Service
             try { _windowContext.Dispose(); }
             catch (Exception ex)
             {
-                Log.Debug(LogTag, $"Window context dispose failed: {ex.Message}");
+                Log.Debug(LogTag, $"Window context dispose failed ({ex.GetType().Name}): {ex}");
             }
         }
         _windowContext = null;
@@ -200,7 +200,7 @@ public class LyricsOverlayService : Service
         }
         catch (Exception ex)
         {
-            Log.Debug(LogTag, $"CreateWindowContext failed: {ex.Message}");
+            Log.Debug(LogTag, $"CreateWindowContext failed ({ex.GetType().Name}): {ex}");
         }
 
         return null;
