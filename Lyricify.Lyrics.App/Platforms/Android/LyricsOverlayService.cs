@@ -228,16 +228,22 @@ public class LyricsOverlayService : Service
             }
 
             var displayContext = sourceContext.CreateDisplayContext(display);
-            var windowContext = displayContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
-            if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+            try
             {
-                LogDiagnostic($"Resolved WindowManager from {sourceName} CreateDisplayContext().CreateWindowContext().");
-                return new WindowBinding(windowContext, manager, true);
-            }
+                var windowContext = displayContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
+                if (windowContext.GetSystemService(WindowService) is IWindowManager manager)
+                {
+                    LogDiagnostic($"Resolved WindowManager from {sourceName} CreateDisplayContext().CreateWindowContext().");
+                    return new WindowBinding(windowContext, manager, true);
+                }
 
-            LogDiagnostic($"{sourceName} display-window context returned null WindowManager.");
-            windowContext.Dispose();
-            displayContext.Dispose();
+                LogDiagnostic($"{sourceName} display-window context returned null WindowManager.");
+                windowContext.Dispose();
+            }
+            finally
+            {
+                displayContext.Dispose();
+            }
         }
         catch (Exception ex)
         {
@@ -433,10 +439,16 @@ public class LyricsOverlayService : Service
         var finalMessage = ex is null
             ? message
             : $"{message} ({ex.GetType().Name}: {ex.Message})";
-        if (level >= AppLogLevel.Error)
-            Log.Error(LogTag, finalMessage);
-        else
-            Log.Warn(LogTag, finalMessage);
+        switch (level)
+        {
+            case AppLogLevel.Error:
+                Log.Error(LogTag, finalMessage);
+                break;
+            case AppLogLevel.Warning:
+            default:
+                Log.Warn(LogTag, finalMessage);
+                break;
+        }
         AppLogService.Current?.Add(level, LogTag, finalMessage);
     }
 
