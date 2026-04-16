@@ -152,18 +152,13 @@ public partial class SettingsPage : ContentPage
 
     private void UpdateColorSwatchSelection(string selectedHex)
     {
-        var swatches = new Dictionary<string, Border>(StringComparer.OrdinalIgnoreCase)
+        // The swatch borders are declared in XAML in the same order as LyricsOverlaySettings.PaletteHexColors.
+        var swatches = new Border[] { ColorSwatchRed, ColorSwatchBlue, ColorSwatchGreen, ColorSwatchGold, ColorSwatchPurple };
+        var palette = LyricsOverlaySettings.PaletteHexColors;
+        for (var i = 0; i < swatches.Length; i++)
         {
-            ["#E05252"] = ColorSwatchRed,
-            ["#39B4E8"] = ColorSwatchBlue,
-            ["#52C57A"] = ColorSwatchGreen,
-            ["#C9A84C"] = ColorSwatchGold,
-            ["#7B5CC7"] = ColorSwatchPurple,
-        };
-
-        foreach (var (hex, swatch) in swatches)
-        {
-            swatch.Stroke = string.Equals(hex, selectedHex, StringComparison.OrdinalIgnoreCase)
+            var hex = i < palette.Count ? palette[i] : string.Empty;
+            swatches[i].Stroke = string.Equals(hex, selectedHex, StringComparison.OrdinalIgnoreCase)
                 ? Color.FromArgb("#FFFFFF")
                 : Color.FromArgb("#00000000");
         }
@@ -182,7 +177,7 @@ public partial class SettingsPage : ContentPage
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
         OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
-        UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, "#39B4E8"));
+        UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
 
         // Re-apply sp_dc to the provider in case the app was restarted.
         var spDc = Preferences.Get(PrefSpDc, string.Empty);

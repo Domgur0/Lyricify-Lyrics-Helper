@@ -38,9 +38,10 @@ internal sealed class LyricsOverlayView : LinearLayout
     private float _currentFontSizeSp = 17f;
     private readonly float _dragThresholdPx;
 
-    // Available color palette (hex values must stay in sync with SettingsPage swatches)
-    internal static readonly string[] PaletteHexColors = ["#E05252", "#39B4E8", "#52C57A", "#C9A84C", "#7B5CC7"];
-    internal const string DefaultActiveColorHex = "#39B4E8";
+    // Available color palette (defined in LyricsOverlaySettings for shared access with Settings UI)
+    // Kept as a convenience alias so callers inside this file use a short name.
+    private static IReadOnlyList<string> PaletteHexColors => LyricsOverlaySettings.PaletteHexColors;
+    internal const string DefaultActiveColorHex = LyricsOverlaySettings.DefaultLyricColorHex;
 
     // Colours
     private global::Android.Graphics.Color _activeColor = global::Android.Graphics.Color.ParseColor(DefaultActiveColorHex);

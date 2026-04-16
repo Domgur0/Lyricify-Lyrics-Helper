@@ -153,10 +153,10 @@ public class LyricsOverlayService : Service
         {
             case ActionSetColor:
                 var colorHex = intent?.GetStringExtra(ExtraColorHex);
-                if (!string.IsNullOrWhiteSpace(colorHex))
+                if (LyricsOverlaySettings.IsValidPaletteColor(colorHex))
                 {
-                    global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLyricColor, colorHex);
-                    RunOnMainThread(() => _overlayView?.SetActiveColor(colorHex));
+                    global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayLyricColor, colorHex!);
+                    RunOnMainThread(() => _overlayView?.SetActiveColor(colorHex!));
                 }
                 break;
             case ActionUnlockOverlay:
@@ -518,7 +518,7 @@ public class LyricsOverlayService : Service
         _overlayView.ColorChanged += OnOverlayColorChanged;
         _overlayView.SetTextSizeSp(global::Microsoft.Maui.Storage.Preferences.Get(PrefLyricsFontSize, 17));
         _overlayView.SetActiveColor(global::Microsoft.Maui.Storage.Preferences.Get(
-            PrefOverlayLyricColor, LyricsOverlayView.DefaultActiveColorHex));
+            PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
         SetOverlayLocked(global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayLocked, false));
         try
         {
