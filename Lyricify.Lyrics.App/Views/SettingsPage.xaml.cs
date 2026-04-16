@@ -200,7 +200,7 @@ public partial class SettingsPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlertAsync("Export Failed", ex.Message, "OK");
+            await DisplayAlertAsync("Export Failed", $"Failed to save log file: {ex.Message}", "OK");
         }
     }
 }

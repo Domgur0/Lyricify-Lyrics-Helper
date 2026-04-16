@@ -39,6 +39,11 @@ public sealed class AppLogService
 
     public AppLogService()
     {
+        // Guard against accidental duplicate registration (last writer wins in production
+        // but we throw in debug to surface misconfiguration early).
+        System.Diagnostics.Debug.Assert(
+            Current is null,
+            "AppLogService: a second instance was constructed – check DI registration.");
         Current = this;
     }
 
