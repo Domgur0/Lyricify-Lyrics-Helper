@@ -161,6 +161,15 @@
                             Toggled="OnOverlayEnabledToggled"
                             OnColor="{StaticResource ActiveLineColor}" />
                     </Grid>
+
+                    <Button
+                        Text="Unlock floating lyrics"
+                        BackgroundColor="#333333"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnUnlockOverlayClicked"
+                        IsVisible="{OnPlatform Default=False, Android=True}" />
                 </VerticalStackLayout>
             </Border>
 

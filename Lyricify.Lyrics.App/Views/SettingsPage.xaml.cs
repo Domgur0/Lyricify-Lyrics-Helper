@@ -106,6 +106,25 @@ public partial class SettingsPage : ContentPage
     private void OnOverlayEnabledToggled(object sender, ToggledEventArgs e)
     {
         Preferences.Set(PrefOverlayEnabled, e.Value);
+        if (e.Value)
+            return;
+
+        Preferences.Set("overlay_should_run", false);
+#if ANDROID
+        var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+        var intent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+        context.StopService(intent);
+#endif
+    }
+
+    private void OnUnlockOverlayClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+        var intent = new Android.Content.Intent(context, typeof(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService));
+        intent.SetAction(Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.ActionUnlockOverlay);
+        context.StartService(intent);
+#endif
     }
 
     protected override void OnAppearing()
