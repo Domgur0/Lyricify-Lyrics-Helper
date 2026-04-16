@@ -101,26 +101,22 @@ public partial class LyricsPage : ContentPage
 #endif
     }
 
-    private void OnAlbumArtPressed(object sender, EventArgs e)
+    private async void OnAlbumArtPressed(object sender, EventArgs e)
     {
         _albumArtLongPressCts?.Cancel();
         _albumArtLongPressCts?.Dispose();
         _albumArtLongPressCts = new CancellationTokenSource();
         var token = _albumArtLongPressCts.Token;
 
-        _ = Task.Run(async () =>
+        try
         {
-            try
-            {
-                await Task.Delay(AlbumArtLongPressMs, token);
-                if (token.IsCancellationRequested) return;
-
-                await MainThread.InvokeOnMainThreadAsync(OpenSettingsTab);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, token);
+            await Task.Delay(AlbumArtLongPressMs, token);
+            if (token.IsCancellationRequested) return;
+            OpenSettingsTab();
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private void OnAlbumArtReleased(object sender, EventArgs e)
