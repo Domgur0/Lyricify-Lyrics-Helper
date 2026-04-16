@@ -157,7 +157,7 @@ public partial class SettingsPage : ContentPage
         var palette = LyricsOverlaySettings.PaletteHexColors;
         for (var i = 0; i < swatches.Length; i++)
         {
-            var hex = i < palette.Count ? palette[i] : string.Empty;
+            var hex = i < palette.Length ? palette[i] : string.Empty;
             swatches[i].Stroke = string.Equals(hex, selectedHex, StringComparison.OrdinalIgnoreCase)
                 ? Color.FromArgb("#FFFFFF")
                 : Color.FromArgb("#00000000");

@@ -57,7 +57,7 @@ internal sealed class LyricsOverlayView : LinearLayout
     public LyricsOverlayView(Context context) : base(context)
     {
         Orientation = Orientation.Vertical;
-        Gravity = GravityFlags.CenterHorizontal;
+        SetGravity(GravityFlags.CenterHorizontal);
         SetBackgroundColor(global::Android.Graphics.Color.ParseColor("#CC000000"));
 
         Clickable = true;
@@ -75,8 +75,8 @@ internal sealed class LyricsOverlayView : LinearLayout
         var actionsRow = new LinearLayout(context)
         {
             Orientation = Orientation.Horizontal,
-            Gravity = GravityFlags.End,
         };
+        actionsRow.SetGravity(GravityFlags.End);
         actionsRow.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent);
 
         _lockButton = CreateIconTextButton(context, "🔒");
@@ -115,8 +115,8 @@ internal sealed class LyricsOverlayView : LinearLayout
         var lyricRow = new LinearLayout(context)
         {
             Orientation = Orientation.Vertical,
-            Gravity = GravityFlags.CenterHorizontal,
         };
+        lyricRow.SetGravity(GravityFlags.CenterHorizontal);
         lyricRow.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent);
         lyricRow.AddView(_currentLineView);
         lyricRow.AddView(_nextLineView);
@@ -124,8 +124,8 @@ internal sealed class LyricsOverlayView : LinearLayout
         _controlsRow = new LinearLayout(context)
         {
             Orientation = Orientation.Vertical,
-            Gravity = GravityFlags.CenterHorizontal,
         };
+        _controlsRow.SetGravity(GravityFlags.CenterHorizontal);
         _controlsRow.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
         {
             TopMargin = (int)(6 * density),
@@ -277,8 +277,8 @@ internal sealed class LyricsOverlayView : LinearLayout
         {
             Text = text,
             TextSize = 20,
-            Gravity = GravityFlags.Center,
         };
+        button.SetGravity(GravityFlags.Center);
         var buttonPadding = (int)(8 * Resources!.DisplayMetrics!.Density);
         button.SetTextColor(ControlsColor);
         button.SetPadding(buttonPadding, buttonPadding, buttonPadding, buttonPadding);
@@ -369,8 +369,8 @@ internal sealed class LyricsOverlayView : LinearLayout
         var row = new LinearLayout(context)
         {
             Orientation = Orientation.Horizontal,
-            Gravity = GravityFlags.CenterVertical,
         };
+        row.SetGravity(GravityFlags.CenterVertical);
         row.LayoutParameters = new LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
         {
             TopMargin = (int)(6 * density),
@@ -384,7 +384,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         }
 
         // Flexible spacer pushes T+ / T- to the right
-        var spacer = new View(context);
+        var spacer = new global::Android.Views.View(context);
         spacer.LayoutParameters = new LinearLayout.LayoutParams(0, 1) { Weight = 1f };
         row.AddView(spacer);
 
@@ -423,7 +423,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         fillDrawable.SetShape(ShapeType.Oval);
         fillDrawable.SetColor(color);
 
-        var inner = new View(context);
+        var inner = new global::Android.Views.View(context);
         inner.Background = fillDrawable;
         inner.LayoutParameters = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MatchParent,
@@ -455,7 +455,7 @@ internal sealed class LyricsOverlayView : LinearLayout
             if (isSelected)
                 drawable.SetStroke(strokePx, global::Android.Graphics.Color.White);
 
-            ((swatch.GetChildAt(0) as View) ?? swatch).Background = drawable;
+            ((swatch.GetChildAt(0) as global::Android.Views.View) ?? swatch).Background = drawable;
         }
     }
 }
