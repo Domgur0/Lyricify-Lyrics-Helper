@@ -73,8 +73,10 @@ jobs:
               break
             fi
           done < <(
-            ls -d /Applications/Xcode_*.app 2>/dev/null \
-              | sort -V -r
+            {
+              ls -d /Applications/Xcode_*.app 2>/dev/null
+              [ -d /Applications/Xcode.app ] && echo /Applications/Xcode.app
+            } | sort -V -r
           )
           if [ -z "$XCODE_ROOT" ]; then
             CANDIDATE=$(xcode-select -p 2>/dev/null | sed 's|/Contents/Developer||')

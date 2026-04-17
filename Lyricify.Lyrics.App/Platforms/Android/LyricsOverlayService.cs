@@ -299,6 +299,11 @@ public class LyricsOverlayService : Service
         try
         {
             var displayContext = sourceContext.CreateDisplayContext(display);
+            if (displayContext is null)
+            {
+                LogDiagnostic($"{sourceName} CreateDisplayContext() returned null context.");
+                return null;
+            }
             try
             {
                 var windowContext = displayContext.CreateWindowContext((int)WindowManagerTypes.ApplicationOverlay, null);
@@ -327,18 +332,21 @@ public class LyricsOverlayService : Service
 
     private Display? TryResolveDisplayForWindowContext(string sourceName, Context sourceContext)
     {
-        try
+        if (OperatingSystem.IsAndroidVersionAtLeast(30))
         {
-            var contextDisplay = sourceContext.Display;
-            if (contextDisplay is not null)
+            try
             {
-                LogDiagnostic($"Resolved display from {sourceName} context.Display.");
-                return contextDisplay;
+                var contextDisplay = sourceContext.Display;
+                if (contextDisplay is not null)
+                {
+                    LogDiagnostic($"Resolved display from {sourceName} context.Display.");
+                    return contextDisplay;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            LogDiagnostic($"{sourceName} context.Display lookup failed.", ex);
+            catch (Exception ex)
+            {
+                LogDiagnostic($"{sourceName} context.Display lookup failed.", ex);
+            }
         }
 
         // Different ROMs may only expose DisplayManager from one of these contexts.
@@ -361,7 +369,14 @@ public class LyricsOverlayService : Service
         try
         {
             Display? fallbackDisplay = null;
-            foreach (var display in displayManager.GetDisplays())
+            var displays = displayManager.GetDisplays();
+            if (displays is null)
+            {
+                LogDiagnostic($"{sourceName} DisplayManager.GetDisplays() returned null.");
+                return null;
+            }
+
+            foreach (var display in displays)
             {
                 if (display is null)
                     continue;
@@ -482,7 +497,8 @@ public class LyricsOverlayService : Service
     private string? ShowOverlay()
     {
         if (_windowManager is null) return "内部错误：WindowManager 为空";
-        if (!global::Android.Provider.Settings.CanDrawOverlays(this))
+        if (OperatingSystem.IsAndroidVersionAtLeast(23) &&
+            !global::Android.Provider.Settings.CanDrawOverlays(this))
             return "悬浮窗创建失败：缺少悬浮窗权限，请在设置中授予";
 
         // Use the context paired with WindowManager to keep the same window token
@@ -794,7 +810,22 @@ public class LyricsOverlayService : Service
             .SetOngoing(true);
 
         if (_overlayLocked)
-            builder.AddAction(global::Android.Resource.Drawable.IcLockIdleLock, "解锁悬浮歌词", unlockPendingIntent);
+        {
+            if (OperatingSystem.IsAndroidVersionAtLeast(23))
+            {
+                var unlockAction = new Notification.Action.Builder(
+                    global::Android.Resource.Drawable.IcLockIdleLock,
+                    "解锁悬浮歌词",
+                    unlockPendingIntent).Build();
+                builder.AddAction(unlockAction);
+            }
+            else
+            {
+#pragma warning disable CA1422 // Notification.Builder.AddAction(int, string?, PendingIntent?) is needed on pre-23
+                builder.AddAction(global::Android.Resource.Drawable.IcLockIdleLock, "解锁悬浮歌词", unlockPendingIntent);
+#pragma warning restore CA1422
+            }
+        }
 
         return builder.Build()!;
     }
