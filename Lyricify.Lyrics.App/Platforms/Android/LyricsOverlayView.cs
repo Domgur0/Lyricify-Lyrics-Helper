@@ -168,6 +168,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         }
 
         var progress = Math.Clamp(lineProgress, 0d, 1d);
+        // Keep enough baseline contrast on dark backgrounds while preserving the selected hue.
         const double baseBrightness = 0.55d;
         var brightness = baseBrightness + ((1d - baseBrightness) * progress);
         var red = (int)Math.Round(_activeColor.R * brightness);
