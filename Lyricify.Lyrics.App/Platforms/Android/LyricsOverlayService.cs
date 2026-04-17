@@ -9,6 +9,7 @@ using Android.Views;
 using Lyricify.Lyrics.App.Services;
 using Lyricify.Lyrics.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 using System.Threading;
 
 namespace Lyricify.Lyrics.App.Platforms.Android;
@@ -41,6 +42,10 @@ public class LyricsOverlayService : Service
     private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
     private const int DefaultDisplayId = 0;
+    private const string FlymeShowTickerFlagName = "FLAG_ALWAYS_SHOW_TICKER";
+    private const string FlymeUpdateTickerFlagName = "FLAG_ONLY_UPDATE_TICKER";
+    private const string FlymeTickerIconSwitchKey = "ticker_icon_switch";
+    private const string FlymeTickerIconKey = "ticker_icon";
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
     private const string PrefOverlayOpacity = "overlay_opacity";
     private const string PrefOverlayShouldRun = "overlay_should_run";
@@ -67,7 +72,13 @@ public class LyricsOverlayService : Service
     private bool _overlayLocked;
     private static int _isRunning;
     private static WeakReference<Context>? _preferredWindowContext;
+    private static readonly Lazy<FlymeTickerFlagSet> FlymeTickerFlags = new(ResolveFlymeTickerFlags);
     public static bool IsRunning => Interlocked.CompareExchange(ref _isRunning, 0, 0) == 1;
+
+    private readonly record struct FlymeTickerFlagSet(int ShowTickerFlag, int UpdateTickerFlag)
+    {
+        public bool IsSupported => ShowTickerFlag > 0 && UpdateTickerFlag > 0;
+    }
 
     /// <summary>
     /// Non-null when the last service startup attempt ended in failure.
@@ -593,6 +604,8 @@ public class LyricsOverlayService : Service
             case nameof(LyricsViewModel.CurrentLineText):
             case nameof(LyricsViewModel.NextLineText):
                 _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
+                if (e.PropertyName == nameof(LyricsViewModel.CurrentLineText))
+                    RefreshForegroundNotification(includeTicker: true);
                 break;
 
             case nameof(LyricsViewModel.LineProgress):
@@ -603,11 +616,7 @@ public class LyricsOverlayService : Service
             case nameof(LyricsViewModel.ArtistName):
             case nameof(LyricsViewModel.HasLyrics):
                 _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
-                var notification = BuildNotification(
-                    _viewModel.TrackTitle,
-                    _viewModel.ArtistName);
-                var manager = GetSystemService(NotificationService) as NotificationManager;
-                manager?.Notify(NotificationId, notification);
+                RefreshForegroundNotification(includeTicker: true);
                 break;
         }
     }
@@ -668,8 +677,7 @@ public class LyricsOverlayService : Service
             LogDiagnostic("Failed to update overlay lock state.", ex);
         }
 
-        var manager = GetSystemService(NotificationService) as NotificationManager;
-        manager?.Notify(NotificationId, BuildNotification(_viewModel?.TrackTitle ?? "Lyricify is running", _viewModel?.ArtistName ?? "Tap to open"));
+        RefreshForegroundNotification(includeTicker: true);
     }
 
     /// <summary>
@@ -786,7 +794,7 @@ public class LyricsOverlayService : Service
     }
 
 #pragma warning disable CA1416 // Validate platform compatibility
-    private Notification BuildNotification(string title, string text)
+    private Notification BuildNotification(string title, string text, string? tickerText = null)
     {
         var pendingIntent = PendingIntent.GetActivity(
             this,
@@ -805,7 +813,7 @@ public class LyricsOverlayService : Service
         var builder = new Notification.Builder(this, ChannelId)
             .SetContentTitle(title)
             .SetContentText(text)
-            .SetSmallIcon(global::Android.Resource.Drawable.IcMediaPlay)
+            .SetSmallIcon(ResolvePlaybackStatusIcon())
             .SetContentIntent(pendingIntent)
             .SetOngoing(true);
 
@@ -829,7 +837,83 @@ public class LyricsOverlayService : Service
             }
         }
 
-        return builder.Build()!;
+        var flymeTickerFlags = FlymeTickerFlags.Value;
+        var hasTickerText = !string.IsNullOrWhiteSpace(tickerText);
+        if (flymeTickerFlags.IsSupported)
+            builder.SetTicker(hasTickerText ? tickerText : null);
+
+        var notification = builder.Build()!;
+        notification.Flags |= NotificationFlags.NoClear;
+
+        if (flymeTickerFlags.IsSupported)
+        {
+            if (OperatingSystem.IsAndroidVersionAtLeast(19))
+            {
+                notification.Extras?.PutBoolean(FlymeTickerIconSwitchKey, false);
+                notification.Extras?.PutInt(FlymeTickerIconKey, ResolvePlaybackStatusIcon());
+            }
+
+            if (hasTickerText)
+            {
+                notification.Flags = (NotificationFlags)(
+                    (int)notification.Flags |
+                    flymeTickerFlags.ShowTickerFlag |
+                    flymeTickerFlags.UpdateTickerFlag);
+            }
+            else
+            {
+                notification.Flags = (NotificationFlags)(
+                    (int)notification.Flags &
+                    ~flymeTickerFlags.ShowTickerFlag &
+                    ~flymeTickerFlags.UpdateTickerFlag);
+            }
+        }
+
+        return notification;
     }
 #pragma warning restore CA1416
+
+    private void RefreshForegroundNotification(bool includeTicker)
+    {
+        var manager = GetSystemService(NotificationService) as NotificationManager;
+        if (manager is null)
+            return;
+
+        var title = string.IsNullOrWhiteSpace(_viewModel?.TrackTitle)
+            ? "Lyricify is running"
+            : _viewModel.TrackTitle;
+        var text = string.IsNullOrWhiteSpace(_viewModel?.ArtistName)
+            ? "Tap to open"
+            : _viewModel.ArtistName;
+        var tickerText = includeTicker ? _viewModel?.CurrentLineText : null;
+
+        manager.Notify(NotificationId, BuildNotification(title, text, tickerText));
+    }
+
+    private int ResolvePlaybackStatusIcon()
+    {
+        if (_viewModel?.IsPlaying == false)
+            return global::Android.Resource.Drawable.IcMediaPause;
+        return global::Android.Resource.Drawable.IcMediaPlay;
+    }
+
+    private static FlymeTickerFlagSet ResolveFlymeTickerFlags()
+    {
+        const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        try
+        {
+            var notificationType = typeof(Notification);
+            var showTickerValue = notificationType.GetField(FlymeShowTickerFlagName, bindingFlags)?.GetValue(null);
+            var updateTickerValue = notificationType.GetField(FlymeUpdateTickerFlagName, bindingFlags)?.GetValue(null);
+
+            if (showTickerValue is int showTickerFlag && updateTickerValue is int updateTickerFlag)
+                return new FlymeTickerFlagSet(showTickerFlag, updateTickerFlag);
+        }
+        catch
+        {
+            // Non-Flyme systems do not expose these flags.
+        }
+
+        return default;
+    }
 }
