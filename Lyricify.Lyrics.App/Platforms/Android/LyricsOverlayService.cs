@@ -885,26 +885,28 @@ public class LyricsOverlayService : Service
         var text = string.IsNullOrWhiteSpace(_viewModel?.ArtistName)
             ? "Tap to open"
             : _viewModel.ArtistName;
-        var tickerText = includeTicker ? _viewModel?.CurrentLineText : null;
+        var tickerText = includeTicker && !string.IsNullOrWhiteSpace(_viewModel?.CurrentLineText)
+            ? _viewModel.CurrentLineText
+            : null;
 
         manager.Notify(NotificationId, BuildNotification(title, text, tickerText));
     }
 
     private int ResolvePlaybackStatusIcon()
     {
-        if (_viewModel?.IsPlaying == false)
-            return global::Android.Resource.Drawable.IcMediaPlay;
-        return global::Android.Resource.Drawable.IcMediaPause;
+        if (_viewModel?.IsPlaying == true)
+            return global::Android.Resource.Drawable.IcMediaPause;
+        return global::Android.Resource.Drawable.IcMediaPlay;
     }
 
     private static FlymeTickerFlagSet ResolveFlymeTickerFlags()
     {
-        const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        const BindingFlags ReflectionBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         try
         {
             var notificationType = typeof(Notification);
-            var showTickerValue = notificationType.GetField(FlymeShowTickerFlagName, bindingFlags)?.GetValue(null);
-            var updateTickerValue = notificationType.GetField(FlymeUpdateTickerFlagName, bindingFlags)?.GetValue(null);
+            var showTickerValue = notificationType.GetField(FlymeShowTickerFlagName, ReflectionBindingFlags)?.GetValue(null);
+            var updateTickerValue = notificationType.GetField(FlymeUpdateTickerFlagName, ReflectionBindingFlags)?.GetValue(null);
 
             if (showTickerValue is int showTickerFlag && updateTickerValue is int updateTickerFlag)
                 return new FlymeTickerFlagSet(showTickerFlag, updateTickerFlag);
