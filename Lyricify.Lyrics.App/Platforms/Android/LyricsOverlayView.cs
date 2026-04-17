@@ -150,7 +150,7 @@ internal sealed class LyricsOverlayView : LinearLayout
             return;
         }
 
-        _currentLineView.Text = currentLine;
+        _currentLineView.Text = string.IsNullOrWhiteSpace(currentLine) ? "…" : currentLine;
         _nextLineView.Text = nextLine;
         _nextLineView.Visibility = string.IsNullOrWhiteSpace(nextLine)
             ? ViewStates.Gone
