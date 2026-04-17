@@ -813,10 +813,12 @@ public class LyricsOverlayService : Service
         {
             if (OperatingSystem.IsAndroidVersionAtLeast(23))
             {
+#pragma warning disable CA1422 // Notification.Action.Builder is required for unlock action on API 23+
                 var unlockAction = new Notification.Action.Builder(
                     global::Android.Resource.Drawable.IcLockIdleLock,
                     "解锁悬浮歌词",
                     unlockPendingIntent).Build();
+#pragma warning restore CA1422
                 builder.AddAction(unlockAction);
             }
             else
