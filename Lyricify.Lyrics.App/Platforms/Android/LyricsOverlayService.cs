@@ -893,8 +893,8 @@ public class LyricsOverlayService : Service
     private int ResolvePlaybackStatusIcon()
     {
         if (_viewModel?.IsPlaying == false)
-            return global::Android.Resource.Drawable.IcMediaPause;
-        return global::Android.Resource.Drawable.IcMediaPlay;
+            return global::Android.Resource.Drawable.IcMediaPlay;
+        return global::Android.Resource.Drawable.IcMediaPause;
     }
 
     private static FlymeTickerFlagSet ResolveFlymeTickerFlags()
@@ -909,9 +909,9 @@ public class LyricsOverlayService : Service
             if (showTickerValue is int showTickerFlag && updateTickerValue is int updateTickerFlag)
                 return new FlymeTickerFlagSet(showTickerFlag, updateTickerFlag);
         }
-        catch
+        catch (Exception ex)
         {
-            // Non-Flyme systems do not expose these flags.
+            Log.Debug(LogTag, $"Flyme ticker flags unavailable ({ex.GetType().Name}): {ex.Message}");
         }
 
         return default;
