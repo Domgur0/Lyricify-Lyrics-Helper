@@ -160,7 +160,7 @@ internal sealed class LyricsOverlayView : LinearLayout
     /// <summary>Updates karaoke-style progress highlight on the current line.</summary>
     public void UpdateProgress(double lineProgress)
     {
-        // Interpolate text colour from white → active as the line progresses.
+        // Blend brightness within the selected hue so the configured color remains visible.
         if (Looper.MainLooper!.Thread != Java.Lang.Thread.CurrentThread())
         {
             Post(() => UpdateProgress(lineProgress));
@@ -168,9 +168,12 @@ internal sealed class LyricsOverlayView : LinearLayout
         }
 
         var progress = Math.Clamp(lineProgress, 0d, 1d);
-        var red = (int)Math.Round(255 + (_activeColor.R - 255) * progress);
-        var green = (int)Math.Round(255 + (_activeColor.G - 255) * progress);
-        var blue = (int)Math.Round(255 + (_activeColor.B - 255) * progress);
+        // Keep enough baseline contrast on dark backgrounds while preserving the selected hue.
+        const double baseBrightness = 0.55d;
+        var brightness = baseBrightness + ((1d - baseBrightness) * progress);
+        var red = (int)Math.Round(_activeColor.R * brightness);
+        var green = (int)Math.Round(_activeColor.G * brightness);
+        var blue = (int)Math.Round(_activeColor.B * brightness);
         var blended = global::Android.Graphics.Color.Argb(255, red, green, blue);
         _currentLineView.SetTextColor(blended);
     }

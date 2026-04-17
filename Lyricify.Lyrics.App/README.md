@@ -122,7 +122,13 @@ Lyricify.Lyrics.App/
 | `spotify_refresh_token` | OAuth2 refresh token |
 | `spotify_token_expires_at` | Unix timestamp (seconds) |
 | `lyrics_font_size` | Lyrics display font size (12–32) |
+| `overlay_enabled` | Whether floating lyrics toggle is enabled in Settings |
+| `overlay_should_run` | Whether overlay should auto-restore after app restart |
+| `overlay_lyric_color` | Floating lyrics active-line color (persisted across restarts) |
 | `overlay_opacity` | Android overlay opacity (0.3–1.0) |
+| `overlay_locked` | Whether overlay drag/controls are locked |
+| `overlay_position_x` | Saved overlay X position in pixels |
+| `overlay_position_y` | Saved overlay Y position in pixels |
 
 ---
 
@@ -259,7 +265,13 @@ Lyricify.Lyrics.App/
 | `spotify_refresh_token` | OAuth2 刷新令牌 |
 | `spotify_token_expires_at` | Unix 时间戳（秒） |
 | `lyrics_font_size` | 歌词字体大小（12–32） |
+| `overlay_enabled` | 设置页中是否启用悬浮歌词开关 |
+| `overlay_should_run` | 应用重启后是否自动恢复悬浮歌词 |
+| `overlay_lyric_color` | 悬浮歌词当前行颜色（重启后保持） |
 | `overlay_opacity` | Android 悬浮窗透明度（0.3–1.0） |
+| `overlay_locked` | 悬浮窗是否锁定拖动与控制区 |
+| `overlay_position_x` | 悬浮窗 X 轴保存位置（像素） |
+| `overlay_position_y` | 悬浮窗 Y 轴保存位置（像素） |
 
 ---
 
