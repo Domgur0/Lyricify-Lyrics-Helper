@@ -160,14 +160,21 @@ internal sealed class LyricsOverlayView : LinearLayout
     /// <summary>Updates karaoke-style progress highlight on the current line.</summary>
     public void UpdateProgress(double lineProgress)
     {
-        // Keep the selected active colour stable across lifecycle/restores.
-        // (progress can temporarily report 0 after restart before sync catches up)
+        // Blend brightness within the selected hue so the configured color remains visible.
         if (Looper.MainLooper!.Thread != Java.Lang.Thread.CurrentThread())
         {
             Post(() => UpdateProgress(lineProgress));
             return;
         }
-        _currentLineView.SetTextColor(_activeColor);
+
+        var progress = Math.Clamp(lineProgress, 0d, 1d);
+        const double baseBrightness = 0.55d;
+        var brightness = baseBrightness + ((1d - baseBrightness) * progress);
+        var red = (int)Math.Round(_activeColor.R * brightness);
+        var green = (int)Math.Round(_activeColor.G * brightness);
+        var blue = (int)Math.Round(_activeColor.B * brightness);
+        var blended = global::Android.Graphics.Color.Argb(255, red, green, blue);
+        _currentLineView.SetTextColor(blended);
     }
 
     /// <summary>Attaches drag-to-move behaviour.</summary>
