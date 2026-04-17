@@ -278,7 +278,7 @@ internal sealed class LyricsOverlayView : LinearLayout
             Text = text,
             TextSize = 20,
         };
-        button.SetGravity(GravityFlags.Center);
+        button.Gravity = GravityFlags.Center;
         var buttonPadding = (int)(8 * Resources!.DisplayMetrics!.Density);
         button.SetTextColor(ControlsColor);
         button.SetPadding(buttonPadding, buttonPadding, buttonPadding, buttonPadding);

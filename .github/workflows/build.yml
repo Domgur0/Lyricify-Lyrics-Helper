@@ -59,16 +59,28 @@ jobs:
 
       - name: Set Xcode version
         run: |
+          check_xcode_candidate() {
+            local candidate="$1"
+            [ -z "$candidate" ] && return 1
+            local developer_dir="$candidate/Contents/Developer"
+            [ ! -d "$developer_dir" ] && return 1
+
+            local sdk_path
+            local actool_path
+            sdk_path=$(DEVELOPER_DIR="$developer_dir" xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)
+            actool_path=$(DEVELOPER_DIR="$developer_dir" xcrun --sdk macosx --find actool 2>/dev/null || true)
+
+            [ -n "$sdk_path" ] \
+              && [ -d "$sdk_path" ] \
+              && [[ "$sdk_path" == *"/MacOSX.sdk" ]] \
+              && [ -n "$actool_path" ] \
+              && [ -x "$actool_path" ]
+          }
+
           XCODE_ROOT=""
-          # Prefer the highest-versioned installed Xcode that can resolve both macOS SDK and actool.
+          # Prefer the highest-versioned installed Xcode that can resolve both macOS SDK and actool via xcrun.
           while IFS= read -r CANDIDATE; do
-            [ -z "$CANDIDATE" ] && continue
-            DEVELOPER_DIR="$CANDIDATE/Contents/Developer"
-            SDK_PATH="$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-            if [ -x "$DEVELOPER_DIR/usr/bin/actool" ] \
-              && [ -d "$SDK_PATH" ] \
-              && DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild -sdk "$SDK_PATH" -find actool >/dev/null 2>&1 \
-              && DEVELOPER_DIR="$DEVELOPER_DIR" xcrun --sdk macosx --find actool >/dev/null 2>&1; then
+            if check_xcode_candidate "$CANDIDATE"; then
               XCODE_ROOT="$CANDIDATE"
               break
             fi
@@ -80,12 +92,7 @@ jobs:
           )
           if [ -z "$XCODE_ROOT" ]; then
             CANDIDATE=$(xcode-select -p 2>/dev/null | sed 's|/Contents/Developer||')
-            DEVELOPER_DIR="$CANDIDATE/Contents/Developer"
-            SDK_PATH="$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-            if [ -x "$DEVELOPER_DIR/usr/bin/actool" ] \
-              && [ -d "$SDK_PATH" ] \
-              && DEVELOPER_DIR="$DEVELOPER_DIR" xcodebuild -sdk "$SDK_PATH" -find actool >/dev/null 2>&1 \
-              && DEVELOPER_DIR="$DEVELOPER_DIR" xcrun --sdk macosx --find actool >/dev/null 2>&1; then
+            if check_xcode_candidate "$CANDIDATE"; then
               XCODE_ROOT="$CANDIDATE"
             fi
           fi
