@@ -45,7 +45,7 @@ internal sealed class LyricsOverlayView : LinearLayout
 
     // Colours
     private global::Android.Graphics.Color _activeColor = global::Android.Graphics.Color.ParseColor(DefaultActiveColorHex);
-    private static readonly global::Android.Graphics.Color DimColor = global::Android.Graphics.Color.ParseColor("#B3FFFFFF");    // semi-transparent white
+    private static readonly global::Android.Graphics.Color DimColor = global::Android.Graphics.Color.ParseColor("#FFFFFFFF");
     private static readonly global::Android.Graphics.Color ControlsColor = global::Android.Graphics.Color.ParseColor("#CCFFFFFF");
 
     public event Action? CloseRequested;
@@ -150,7 +150,7 @@ internal sealed class LyricsOverlayView : LinearLayout
             return;
         }
 
-        _currentLineView.Text = currentLine;
+        _currentLineView.Text = string.IsNullOrWhiteSpace(currentLine) ? "…" : currentLine;
         _nextLineView.Text = nextLine;
         _nextLineView.Visibility = string.IsNullOrWhiteSpace(nextLine)
             ? ViewStates.Gone
@@ -160,16 +160,18 @@ internal sealed class LyricsOverlayView : LinearLayout
     /// <summary>Updates karaoke-style progress highlight on the current line.</summary>
     public void UpdateProgress(double lineProgress)
     {
-        // Interpolate text colour from dim → active as the line progresses.
-        // A full gradient shader would require a custom draw; here we use a simple alpha.
+        // Interpolate text colour from white → active as the line progresses.
         if (Looper.MainLooper!.Thread != Java.Lang.Thread.CurrentThread())
         {
             Post(() => UpdateProgress(lineProgress));
             return;
         }
 
-        var alpha = (int)(0x66 + (0xFF - 0x66) * lineProgress);
-        var blended = global::Android.Graphics.Color.Argb(alpha, _activeColor.R, _activeColor.G, _activeColor.B);
+        var progress = Math.Clamp(lineProgress, 0d, 1d);
+        var red = (int)Math.Round(255 + (_activeColor.R - 255) * progress);
+        var green = (int)Math.Round(255 + (_activeColor.G - 255) * progress);
+        var blue = (int)Math.Round(255 + (_activeColor.B - 255) * progress);
+        var blended = global::Android.Graphics.Color.Argb(255, red, green, blue);
         _currentLineView.SetTextColor(blended);
     }
 
@@ -267,7 +269,7 @@ internal sealed class LyricsOverlayView : LinearLayout
         textView.SetSingleLine(true);
         textView.SetHorizontallyScrolling(true);
         textView.Ellipsize = TextUtils.TruncateAt.Marquee;
-        textView.SetMarqueeRepeatLimit(-1);
+        textView.SetMarqueeRepeatLimit(0);
         textView.Selected = true;
     }
 
