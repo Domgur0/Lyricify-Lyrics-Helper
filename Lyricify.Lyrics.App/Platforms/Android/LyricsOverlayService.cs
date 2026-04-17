@@ -47,6 +47,7 @@ public class LyricsOverlayService : Service
     private const string FlymeTickerIconSwitchKey = "ticker_icon_switch";
     private const string FlymeTickerIconKey = "ticker_icon";
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
+    public const string PrefFlymeStatusBarEnabled = "flyme_status_bar_enabled";
     private const string PrefOverlayOpacity = "overlay_opacity";
     private const string PrefOverlayShouldRun = "overlay_should_run";
     private const string PrefOverlayPosX = "overlay_position_x";
@@ -885,7 +886,8 @@ public class LyricsOverlayService : Service
         var text = string.IsNullOrWhiteSpace(_viewModel?.ArtistName)
             ? "Tap to open"
             : _viewModel.ArtistName;
-        var tickerText = includeTicker && !string.IsNullOrWhiteSpace(_viewModel?.CurrentLineText)
+        var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(PrefFlymeStatusBarEnabled, false);
+        var tickerText = includeTicker && flymeEnabled && !string.IsNullOrWhiteSpace(_viewModel?.CurrentLineText)
             ? _viewModel.CurrentLineText
             : null;
 

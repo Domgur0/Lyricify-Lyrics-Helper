@@ -13,6 +13,9 @@ public partial class SettingsPage : ContentPage
     private const string PrefSpDc = "spotify_sp_dc";
     private const string PrefOverlayEnabled = "overlay_enabled";
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
+#if ANDROID
+    private const string PrefFlymeStatusBarEnabled = Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.PrefFlymeStatusBarEnabled;
+#endif
 
     public SettingsPage()
     {
@@ -118,6 +121,13 @@ public partial class SettingsPage : ContentPage
 #endif
     }
 
+    private void OnFlymeStatusBarToggled(object sender, ToggledEventArgs e)
+    {
+#if ANDROID
+        Preferences.Set(PrefFlymeStatusBarEnabled, e.Value);
+#endif
+    }
+
     private void OnUnlockOverlayClicked(object sender, EventArgs e)
     {
 #if ANDROID
@@ -177,6 +187,9 @@ public partial class SettingsPage : ContentPage
         FontSizeSlider.Value = Preferences.Get("lyrics_font_size", 17);
         OpacitySlider.Value = Preferences.Get("overlay_opacity", 0.9f);
         OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
+#if ANDROID
+        FlymeStatusBarSwitch.IsToggled = Preferences.Get(PrefFlymeStatusBarEnabled, false);
+#endif
         UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
 
         // Re-apply sp_dc to the provider in case the app was restarted.
