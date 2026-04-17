@@ -162,6 +162,26 @@
                             OnColor="{StaticResource ActiveLineColor}" />
                     </Grid>
 
+                    <Grid
+                        ColumnDefinitions="*,Auto"
+                        IsVisible="{OnPlatform Default=False, Android=True}">
+                        <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                            <Label
+                                Text="Enable Flyme status bar lyrics"
+                                TextColor="{StaticResource InactiveLineColor}"
+                                FontSize="13" />
+                            <Label
+                                Text="Show lyrics in Meizu Flyme status bar (Flyme devices only)"
+                                TextColor="#888888"
+                                FontSize="11" />
+                        </VerticalStackLayout>
+                        <Switch
+                            x:Name="FlymeStatusBarSwitch"
+                            Grid.Column="1"
+                            Toggled="OnFlymeStatusBarToggled"
+                            OnColor="{StaticResource ActiveLineColor}" />
+                    </Grid>
+
                     <Button
                         Text="Unlock floating lyrics"
                         BackgroundColor="#333333"
