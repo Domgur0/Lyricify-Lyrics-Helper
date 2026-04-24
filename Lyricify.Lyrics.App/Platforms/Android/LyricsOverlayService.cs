@@ -70,6 +70,7 @@ public class LyricsOverlayService : Service
     private LyricsOverlayView? _overlayView;
     private WindowManagerLayoutParams? _overlayLayoutParams;
     private LyricsViewModel? _viewModel;
+    private SuperLyricPublisher? _superLyricPublisher;
     private bool _overlayLocked;
     private static int _isRunning;
     private static WeakReference<Context>? _preferredWindowContext;
@@ -155,6 +156,10 @@ public class LyricsOverlayService : Service
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         UpdateOverlayFromViewModel();
 
+        // Publish real-time lyrics to SuperLyric (Xposed module), if available.
+        _superLyricPublisher = new SuperLyricPublisher(_viewModel);
+        _superLyricPublisher.Connect();
+
         // Notify page and other observers that startup succeeded (on main thread).
         RunOnMainThread(() => OverlayStartResult?.Invoke(null));
     }
@@ -191,6 +196,9 @@ public class LyricsOverlayService : Service
 
         if (_viewModel is not null)
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+
+        _superLyricPublisher?.Dispose();
+        _superLyricPublisher = null;
 
         RemoveOverlay();
         if (_windowContext is not null && _ownsWindowContext)
@@ -598,7 +606,24 @@ public class LyricsOverlayService : Service
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (_overlayView is null || _viewModel is null) return;
+        if (_viewModel is null) return;
+
+        // Forward lyric-line changes to the SuperLyric publisher.
+        if (_superLyricPublisher is not null)
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(LyricsViewModel.CurrentLineIndex):
+                    _superLyricPublisher.OnLineIndexChanged(_viewModel.CurrentLineIndex);
+                    break;
+
+                case nameof(LyricsViewModel.IsTrackLoaded) when !_viewModel.IsTrackLoaded:
+                    _superLyricPublisher.OnPlaybackStopped();
+                    break;
+            }
+        }
+
+        if (_overlayView is null) return;
 
         switch (e.PropertyName)
         {
