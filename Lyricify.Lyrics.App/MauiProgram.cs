@@ -27,6 +27,10 @@ public static class MauiProgram
         builder.Services.AddSingleton(appLogService);
         builder.Logging.AddProvider(new AppLogProvider(appLogService));
 
+        // Persist log entries to disk so they survive hard crashes.
+        try { appLogService.InitPersistence(FileSystem.AppDataDirectory); }
+        catch { /* Non-critical if the path is not yet available. */ }
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
