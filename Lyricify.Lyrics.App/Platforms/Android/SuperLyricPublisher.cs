@@ -286,7 +286,7 @@ internal sealed class SuperLyricPublisher : IDisposable
 
             parcelData.WriteInterfaceToken(ManagerDescriptor);
             writeData?.Invoke(parcelData);
-            _binder.Transact(code, parcelData, parcelReply, ParcelFlags.None);
+            _binder.Transact(code, parcelData, parcelReply, 0);
         }
         catch (Exception ex)
         {
