@@ -12,7 +12,7 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
 /// <para>
 /// The ISuperLyricManager AIDL wire protocol is implemented directly in C# using
 /// JNI to reach the hidden <c>android.os.ServiceManager</c> API and
-/// <see cref="Parcel"/> for serialisation — no Java AAR dependency required.
+/// <see cref="Parcel"/> for serialization — no Java AAR dependency required.
 /// </para>
 /// </summary>
 internal sealed class SuperLyricPublisher : IDisposable
@@ -124,7 +124,6 @@ internal sealed class SuperLyricPublisher : IDisposable
 
     private void SendLyric(ILineInfo line)
     {
-        _lastLineIndex = _viewModel.CurrentLineIndex;
         Transact(TransactionSendLyric, data => WriteLyricData(data, line));
     }
 
