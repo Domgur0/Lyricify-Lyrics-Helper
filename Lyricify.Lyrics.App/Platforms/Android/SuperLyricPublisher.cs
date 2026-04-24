@@ -215,7 +215,7 @@ internal sealed class SuperLyricPublisher : IDisposable
         //   writeTypedArray(words, flags)
         //   writeLong(startTime)
         //   writeLong(endTime)
-        //   writeLong(delay)   — deprecated, always 0
+        // Note: getDelay() returns (endTime - startTime) and is computed, not stored.
         data.WriteString(line.Text);
 
         if (includeSyllables && line is SyllableLineInfo syllableLine
@@ -230,7 +230,6 @@ internal sealed class SuperLyricPublisher : IDisposable
 
         data.WriteLong(line.StartTime ?? 0L);
         data.WriteLong(line.EndTime ?? 0L);
-        data.WriteLong(0L); // delay (deprecated)
     }
 
     /// <summary>
@@ -243,7 +242,7 @@ internal sealed class SuperLyricPublisher : IDisposable
         data.WriteInt(-1); // no words
         data.WriteLong(startTime);
         data.WriteLong(endTime);
-        data.WriteLong(0L); // delay (deprecated)
+        // Note: getDelay() returns (endTime - startTime) and is computed, not stored.
     }
 
     /// <summary>
@@ -258,9 +257,8 @@ internal sealed class SuperLyricPublisher : IDisposable
         foreach (var s in syllables)
         {
             data.WriteInt(1); // non-null marker
-            // SuperLyricWord.writeToParcel: word, delay (deprecated), startTime, endTime
+            // SuperLyricWord.writeToParcel: word, startTime, endTime
             data.WriteString(s.Text);
-            data.WriteLong(0L); // delay (deprecated)
             data.WriteLong(s.StartTime);
             data.WriteLong(s.EndTime);
         }
