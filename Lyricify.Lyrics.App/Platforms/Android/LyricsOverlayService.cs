@@ -69,6 +69,7 @@ public class LyricsOverlayService : Service
     private bool _ownsWindowContext;
     private LyricsOverlayView? _overlayView;
     private WindowManagerLayoutParams? _overlayLayoutParams;
+    private bool _overlayViewAttached;
     private LyricsViewModel? _viewModel;
     private SuperLyricPublisher? _superLyricPublisher;
     private bool _overlayLocked;
@@ -559,6 +560,7 @@ public class LyricsOverlayService : Service
         try
         {
             _windowManager.AddView(_overlayView, _overlayLayoutParams);
+            _overlayViewAttached = true;
             global::Microsoft.Maui.Storage.Preferences.Set(PrefOverlayShouldRun, true);
             return null;
         }
@@ -598,6 +600,7 @@ public class LyricsOverlayService : Service
         {
             // View may have already been removed.
         }
+        _overlayViewAttached = false;
         _overlayView = null;
         _overlayLayoutParams = null;
     }
@@ -693,6 +696,13 @@ public class LyricsOverlayService : Service
             ? 1f
             : global::Microsoft.Maui.Storage.Preferences.Get(PrefOverlayOpacity, 0.9f);
         _overlayView.SetLocked(_overlayLocked);
+
+        // UpdateViewLayout requires the view to already be attached via AddView.
+        // During initial setup in ShowOverlay, SetOverlayLocked is called before
+        // AddView so we skip the layout update here; AddView will use the already-
+        // updated _overlayLayoutParams on its own.
+        if (!_overlayViewAttached)
+            return;
 
         try
         {
