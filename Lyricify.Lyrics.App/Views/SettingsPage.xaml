@@ -290,7 +290,7 @@
                 </Border.StrokeShape>
                 <VerticalStackLayout Spacing="12">
                     <Label
-                        Text="Exports warnings and errors captured since the last launch."
+                        Text="Exports the session log (warnings, errors, and crash reports from the current and previous sessions). Share the exported file when reporting an issue."
                         TextColor="{StaticResource InactiveLineColor}"
                         FontSize="12" />
                     <Button

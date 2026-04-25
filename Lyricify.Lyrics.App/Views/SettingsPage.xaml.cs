@@ -198,6 +198,22 @@ public partial class SettingsPage : ContentPage
             ProviderHelper.SpotifyApi.SetSpDc(spDc);
 
         RefreshLoginStatus();
+
+        // If a JVM crash was detected on startup, prompt the user to export the log.
+        // Delay slightly so the page is fully rendered before showing a dialog.
+        if (App.HasPendingCrashReport)
+            Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(400), () => _ = PromptCrashExportAsync());
+    }
+
+    private async Task PromptCrashExportAsync()
+    {
+        bool export = await DisplayAlert(
+            "检测到崩溃记录",
+            "上次运行时应用崩溃，已捕获崩溃日志。是否立即导出以便反馈？",
+            "导出",
+            "稍后");
+        if (export)
+            await ExportLogAsync();
     }
 
     // ── Login status ──────────────────────────────────────────────────────────
@@ -251,10 +267,22 @@ public partial class SettingsPage : ContentPage
 
     // ── Diagnostics ───────────────────────────────────────────────────────────
 
-    private async void OnExportLogClicked(object sender, EventArgs e)
+    private async void OnExportLogClicked(object sender, EventArgs e) =>
+        await ExportLogAsync();
+
+    private async Task ExportLogAsync()
     {
-        var logText = AppLogService.Current?.ExportText()
-            ?? "(Log service unavailable – restart the app and try again.)";
+        var logService = AppLogService.Current;
+
+        // Prefer the persisted (disk) log because it spans multiple sessions
+        // and survives hard crashes.  Fall back to the in-memory snapshot.
+        var persistedText = logService is not null
+            ? await logService.ReadPersistedLogAsync()
+            : string.Empty;
+
+        var logText = !string.IsNullOrWhiteSpace(persistedText)
+            ? persistedText
+            : (logService?.ExportText() ?? "(Log service unavailable – restart the app and try again.)");
 
         var fileName = $"lyricify-log-{DateTime.UtcNow:yyyyMMdd-HHmmss}.txt";
         var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
