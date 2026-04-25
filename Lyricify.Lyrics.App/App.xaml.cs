@@ -95,6 +95,16 @@ public partial class App : Application
 
     private static Page CreateStartupErrorPage(Exception ex)
     {
+        var exportButton = new Button
+        {
+            Text = "导出日志",
+            BackgroundColor = Color.FromArgb("#3A3A3A"),
+            TextColor = Colors.White,
+            CornerRadius = 8,
+            Margin = new Thickness(0, 10, 0, 0),
+        };
+        exportButton.Clicked += async (_, _) => await ExportLogFromErrorPageAsync(exportButton);
+
         return new ContentPage
         {
             BackgroundColor = Color.FromArgb("#121212"),
@@ -123,10 +133,46 @@ public partial class App : Application
                         Text = ex.Message,
                         TextColor = Color.FromArgb("#B3FFFFFF"),
                         HorizontalTextAlignment = TextAlignment.Center
-                    }
+                    },
+                    exportButton
                 }
             }
         };
+    }
+
+    private static async Task ExportLogFromErrorPageAsync(Button button)
+    {
+        button.IsEnabled = false;
+        try
+        {
+            var logService = AppLogService.Current;
+
+            var persistedText = logService is not null
+                ? await logService.ReadPersistedLogAsync()
+                : string.Empty;
+
+            var logText = !string.IsNullOrWhiteSpace(persistedText)
+                ? persistedText
+                : (logService?.ExportText() ?? "(Log service unavailable)");
+
+            var fileName = $"lyricify-log-{DateTime.UtcNow:yyyyMMdd-HHmmss}.txt";
+            var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+            await File.WriteAllTextAsync(filePath, logText);
+
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "Lyricify Log",
+                File = new ShareFile(filePath, "text/plain"),
+            });
+        }
+        catch
+        {
+            // Nothing useful to show when we are already on an error page.
+        }
+        finally
+        {
+            button.IsEnabled = true;
+        }
     }
 
     private static void ReportError(string title, Exception ex)
