@@ -335,7 +335,10 @@ internal sealed class SuperLyricPublisher : IDisposable
             }
             finally
             {
-                JNIEnv.DeleteLocalRef(cls);
+                // JNIEnv.FindClass returns a global reference in .NET for Android;
+                // DeleteGlobalRef must be used here to avoid SIGABRT ("Attempt to delete
+                // global reference as local JNI reference").
+                JNIEnv.DeleteGlobalRef(cls);
             }
         }
         catch (Exception ex)
