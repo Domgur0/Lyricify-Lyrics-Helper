@@ -135,6 +135,10 @@ internal sealed class SuperLyricPublisher : IDisposable
     /// </summary>
     private void WriteLyricData(Parcel data, ILineInfo line)
     {
+        // AIDL 'in' Parcelable parameter protocol: writeInt(1) for non-null object,
+        // then writeToParcel() — the stub's onTransact calls readInt() first.
+        data.WriteInt(1);
+
         // title, artist, album
         data.WriteString(_viewModel.TrackTitle);
         data.WriteString(_viewModel.ArtistName);
@@ -169,6 +173,9 @@ internal sealed class SuperLyricPublisher : IDisposable
     /// </summary>
     private void WriteStopData(Parcel data)
     {
+        // AIDL 'in' Parcelable parameter protocol: writeInt(1) for non-null object.
+        data.WriteInt(1);
+
         data.WriteString(_viewModel.TrackTitle);
         data.WriteString(_viewModel.ArtistName);
         data.WriteString(null); // album
