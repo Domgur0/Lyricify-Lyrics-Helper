@@ -43,6 +43,8 @@ public class LyricsOverlayService : Service
     private const int DefaultDisplayId = 0;
     private const string FlymeShowTickerFlagName = "FLAG_ALWAYS_SHOW_TICKER";
     private const string FlymeUpdateTickerFlagName = "FLAG_ONLY_UPDATE_TICKER";
+    private const int FlymeShowTickerFlagFallback = 0x1000000; // FLAG_ALWAYS_SHOW_TICKER
+    private const int FlymeUpdateTickerFlagFallback = 0x2000000; // FLAG_ONLY_UPDATE_TICKER
     private const string FlymeTickerIconSwitchKey = "ticker_icon_switch";
     private const string FlymeTickerIconKey = "ticker_icon";
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
@@ -953,14 +955,18 @@ public class LyricsOverlayService : Service
             if (showField is not null && updateField is not null)
                 return new FlymeTickerFlagSet(showField.GetInt(null), updateField.GetInt(null));
 
-            Log.Debug(LogTag, "Flyme ticker flags not found in android.app.Notification — likely not a Flyme/Meizu device.");
+            Log.Debug(LogTag, "Flyme ticker flags not found in android.app.Notification — falling back to hardcoded Meizu values.");
         }
         catch (Exception ex)
         {
-            Log.Debug(LogTag, $"Flyme ticker flags unavailable ({ex.GetType().Name}): {ex.Message}");
+            Log.Debug(LogTag, $"Flyme ticker flags unavailable ({ex.GetType().Name}): {ex.Message} — falling back to hardcoded Meizu values.");
         }
 
-        return default;
+        // Fallback to the well-known Meizu/Flyme constant values.
+        // These are the exact flags checked by the meizu-provider Xposed module
+        // (FLAG_MEIZU_TICKER = FLAG_ALWAYS_SHOW_TICKER | FLAG_ONLY_UPDATE_TICKER), so
+        // setting them lets meizu-provider capture lyrics even on non-Flyme devices.
+        return new FlymeTickerFlagSet(FlymeShowTickerFlagFallback, FlymeUpdateTickerFlagFallback);
     }
 
     /// <summary>
