@@ -9,7 +9,6 @@ using Android.Views;
 using Lyricify.Lyrics.App.Services;
 using Lyricify.Lyrics.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 using System.Threading;
 
 namespace Lyricify.Lyrics.App.Platforms.Android;
@@ -938,15 +937,23 @@ public class LyricsOverlayService : Service
 
     private static FlymeTickerFlagSet ResolveFlymeTickerFlags()
     {
-        const BindingFlags ReflectionBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        // The Flyme-specific Notification flag constants (FLAG_ALWAYS_SHOW_TICKER,
+        // FLAG_ONLY_UPDATE_TICKER) exist only on the Java android.app.Notification class
+        // as ROM-level extensions on Meizu/Flyme devices.  C# reflection on the .NET
+        // wrapper class (typeof(Notification).GetField(...)) cannot see them because the
+        // .NET binding is compiled against the standard Android SDK, not the Flyme ROM.
+        // We use Java reflection via Java.Lang.Class to reach the actual runtime class.
         try
         {
-            var notificationType = typeof(Notification);
-            var showTickerValue = notificationType.GetField(FlymeShowTickerFlagName, ReflectionBindingFlags)?.GetValue(null);
-            var updateTickerValue = notificationType.GetField(FlymeUpdateTickerFlagName, ReflectionBindingFlags)?.GetValue(null);
+            using var notifClass = Java.Lang.Class.ForName("android.app.Notification");
 
-            if (showTickerValue is int showTickerFlag && updateTickerValue is int updateTickerFlag)
-                return new FlymeTickerFlagSet(showTickerFlag, updateTickerFlag);
+            using var showField = TryGetJavaPublicField(notifClass, FlymeShowTickerFlagName);
+            using var updateField = TryGetJavaPublicField(notifClass, FlymeUpdateTickerFlagName);
+
+            if (showField is not null && updateField is not null)
+                return new FlymeTickerFlagSet(showField.GetInt(null), updateField.GetInt(null));
+
+            Log.Debug(LogTag, "Flyme ticker flags not found in android.app.Notification — likely not a Flyme/Meizu device.");
         }
         catch (Exception ex)
         {
@@ -954,5 +961,27 @@ public class LyricsOverlayService : Service
         }
 
         return default;
+    }
+
+    /// <summary>
+    /// Returns the named public field of <paramref name="cls"/>, or <c>null</c> if the
+    /// field does not exist (i.e. the device is not running a ROM that declares it).
+    /// </summary>
+    private static Java.Lang.Reflect.Field? TryGetJavaPublicField(Java.Lang.Class cls, string fieldName)
+    {
+        try
+        {
+            return cls.GetField(fieldName);
+        }
+        catch (Java.Lang.NoSuchFieldException)
+        {
+            // Field is absent on this ROM — not a Flyme/Meizu device, or field name changed.
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(LogTag, $"TryGetJavaPublicField({fieldName}) failed unexpectedly: {ex.GetType().Name} — {ex.Message}");
+            return null;
+        }
     }
 }

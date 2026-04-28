@@ -210,12 +210,12 @@ internal sealed class SuperLyricPublisher : IDisposable
 
         data.WriteString(LineClassName); // writeParcelableCreator
 
-        // SuperLyricLine.writeToParcel:
+        // SuperLyricLine.writeToParcel (API 3.4 source-verified):
         //   writeString(text)
         //   writeTypedArray(words, flags)
         //   writeLong(startTime)
         //   writeLong(endTime)
-        // Note: getDelay() returns (endTime - startTime) and is computed, not stored.
+        //   writeLong(delay)   ← deprecated since 3.2 but still present in Parcel for binary compat
         data.WriteString(line.Text);
 
         if (includeSyllables && line is SyllableLineInfo syllableLine
@@ -230,6 +230,7 @@ internal sealed class SuperLyricPublisher : IDisposable
 
         data.WriteLong(line.StartTime ?? 0L);
         data.WriteLong(line.EndTime ?? 0L);
+        data.WriteLong(0L); // delay — deprecated since 3.2; always 0 but must be written for Parcel compat
     }
 
     /// <summary>
@@ -242,7 +243,7 @@ internal sealed class SuperLyricPublisher : IDisposable
         data.WriteInt(-1); // no words
         data.WriteLong(startTime);
         data.WriteLong(endTime);
-        // Note: getDelay() returns (endTime - startTime) and is computed, not stored.
+        data.WriteLong(0L); // delay — deprecated since 3.2; always 0 but must be written for Parcel compat
     }
 
     /// <summary>
@@ -257,8 +258,9 @@ internal sealed class SuperLyricPublisher : IDisposable
         foreach (var s in syllables)
         {
             data.WriteInt(1); // non-null marker
-            // SuperLyricWord.writeToParcel: word, startTime, endTime
+            // SuperLyricWord.writeToParcel (API 3.4 source-verified): word, delay, startTime, endTime
             data.WriteString(s.Text);
+            data.WriteLong(0L); // delay — deprecated since 2.7; always 0 but must be written for Parcel compat
             data.WriteLong(s.StartTime);
             data.WriteLong(s.EndTime);
         }
