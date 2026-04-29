@@ -182,6 +182,26 @@
                             OnColor="{StaticResource ActiveLineColor}" />
                     </Grid>
 
+                    <Grid
+                        ColumnDefinitions="*,Auto"
+                        IsVisible="{OnPlatform Default=False, Android=True}">
+                        <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                            <Label
+                                Text="Enable SuperLyric integration"
+                                TextColor="{StaticResource InactiveLineColor}"
+                                FontSize="13" />
+                            <Label
+                                Text="Send lyrics to SuperLyric module without the floating overlay"
+                                TextColor="#888888"
+                                FontSize="11" />
+                        </VerticalStackLayout>
+                        <Switch
+                            x:Name="SuperLyricEnabledSwitch"
+                            Grid.Column="1"
+                            Toggled="OnSuperLyricEnabledToggled"
+                            OnColor="{StaticResource ActiveLineColor}" />
+                    </Grid>
+
                     <Button
                         Text="Unlock floating lyrics"
                         BackgroundColor="#333333"
