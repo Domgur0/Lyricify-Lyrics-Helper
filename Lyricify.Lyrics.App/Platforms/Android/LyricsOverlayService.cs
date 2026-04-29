@@ -158,6 +158,16 @@ public class LyricsOverlayService : Service
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         UpdateOverlayFromViewModel();
 
+        // If the standalone SuperLyric service is running, stop it — overlay takes over publishing.
+        if (SuperLyricService.IsRunning)
+        {
+            try { StopService(new Intent(this, typeof(SuperLyricService))); }
+            catch (Exception ex)
+            {
+                Log.Debug(LogTag, $"Could not stop SuperLyricService: {ex.Message}");
+            }
+        }
+
         // Publish real-time lyrics to SuperLyric (Xposed module), if available.
         _superLyricPublisher = new SuperLyricPublisher(_viewModel);
         _superLyricPublisher.Connect();
@@ -201,6 +211,17 @@ public class LyricsOverlayService : Service
 
         _superLyricPublisher?.Dispose();
         _superLyricPublisher = null;
+
+        // If the user has standalone SuperLyric enabled, hand publishing back to SuperLyricService.
+        if (global::Microsoft.Maui.Storage.Preferences.Get(SuperLyricService.PrefSuperLyricEnabled, false)
+            && !SuperLyricService.IsRunning)
+        {
+            try { StartForegroundService(new Intent(this, typeof(SuperLyricService))); }
+            catch (Exception ex)
+            {
+                Log.Debug(LogTag, $"Could not restart SuperLyricService from OnDestroy: {ex.Message}");
+            }
+        }
 
         RemoveOverlay();
         if (_windowContext is not null && _ownsWindowContext)

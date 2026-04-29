@@ -33,5 +33,11 @@
             android:name=".LyricsOverlayService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
+
+        <!-- SuperLyric standalone foreground service (no overlay window) -->
+        <service
+            android:name=".SuperLyricService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
     </application>
 </manifest>

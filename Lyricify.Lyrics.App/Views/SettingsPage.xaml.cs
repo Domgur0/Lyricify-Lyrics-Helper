@@ -15,6 +15,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
 #if ANDROID
     private const string PrefFlymeStatusBarEnabled = Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.PrefFlymeStatusBarEnabled;
+    private const string PrefSuperLyricEnabled = Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.PrefSuperLyricEnabled;
 #endif
 
     public SettingsPage()
@@ -128,6 +129,29 @@ public partial class SettingsPage : ContentPage
 #endif
     }
 
+    private void OnSuperLyricEnabledToggled(object sender, ToggledEventArgs e)
+    {
+#if ANDROID
+        Preferences.Set(PrefSuperLyricEnabled, e.Value);
+        var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+        if (e.Value)
+        {
+            // Start the service only when the overlay isn't already handling SuperLyric.
+            if (!Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning
+                && !Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.IsRunning)
+            {
+                context.StartForegroundService(new Android.Content.Intent(
+                    context, typeof(Lyricify.Lyrics.App.Platforms.Android.SuperLyricService)));
+            }
+        }
+        else
+        {
+            context.StopService(new Android.Content.Intent(
+                context, typeof(Lyricify.Lyrics.App.Platforms.Android.SuperLyricService)));
+        }
+#endif
+    }
+
     private void OnUnlockOverlayClicked(object sender, EventArgs e)
     {
 #if ANDROID
@@ -189,6 +213,7 @@ public partial class SettingsPage : ContentPage
         OverlayEnabledSwitch.IsToggled = Preferences.Get(PrefOverlayEnabled, false);
 #if ANDROID
         FlymeStatusBarSwitch.IsToggled = Preferences.Get(PrefFlymeStatusBarEnabled, false);
+        SuperLyricEnabledSwitch.IsToggled = Preferences.Get(PrefSuperLyricEnabled, false);
 #endif
         UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
 

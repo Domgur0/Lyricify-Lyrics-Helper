@@ -12,6 +12,9 @@ public partial class LyricsPage : ContentPage
     private const int AlbumArtLongPressMs = 650;
     private const string PrefOverlayEnabled = "overlay_enabled";
     private const string PrefOverlayShouldRun = "overlay_should_run";
+#if ANDROID
+    private const string PrefSuperLyricEnabled = Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.PrefSuperLyricEnabled;
+#endif
 
     /// <summary>
     /// Parameterless constructor used by MAUI Shell <c>DataTemplate</c> resolution.
@@ -67,6 +70,20 @@ public partial class LyricsPage : ContentPage
         else if (!_overlayRunning && OverlayToggleButton.IsVisible && shouldRestoreOverlay && hasOverlayPermission)
         {
             StartAndroidOverlay();
+        }
+
+        // Auto-start standalone SuperLyric service if enabled and overlay is not running.
+        if (!_overlayRunning
+            && Preferences.Get(PrefSuperLyricEnabled, false)
+            && !Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.IsRunning)
+        {
+            try
+            {
+                var ctx = Platform.CurrentActivity ?? Android.App.Application.Context;
+                ctx.StartForegroundService(new Android.Content.Intent(
+                    ctx, typeof(Lyricify.Lyrics.App.Platforms.Android.SuperLyricService)));
+            }
+            catch { /* Non-critical; will retry on next app open. */ }
         }
 #endif
 
@@ -241,6 +258,18 @@ public partial class LyricsPage : ContentPage
             Preferences.Set(PrefOverlayShouldRun, false);
             _overlayRunning = false;
             (sender as Button)!.Text = OverlayButtonTextShow;
+
+            // Hand off SuperLyric to the standalone service when the overlay closes (if enabled).
+            if (Preferences.Get(PrefSuperLyricEnabled, false)
+                && !Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.IsRunning)
+            {
+                try
+                {
+                    context.StartForegroundService(new Android.Content.Intent(
+                        context, typeof(Lyricify.Lyrics.App.Platforms.Android.SuperLyricService)));
+                }
+                catch { /* Non-critical; LyricsOverlayService.OnDestroy will also attempt this. */ }
+            }
         }
     }
 
