@@ -80,8 +80,10 @@ public partial class LyricsPage : ContentPage
             try
             {
                 var ctx = Platform.CurrentActivity ?? Android.App.Application.Context;
+#pragma warning disable CA1416
                 ctx.StartForegroundService(new Android.Content.Intent(
                     ctx, typeof(Lyricify.Lyrics.App.Platforms.Android.SuperLyricService)));
+#pragma warning restore CA1416
             }
             catch { /* Non-critical; will retry on next app open. */ }
         }
