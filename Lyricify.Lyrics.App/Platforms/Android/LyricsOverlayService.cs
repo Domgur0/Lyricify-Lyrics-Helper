@@ -160,9 +160,12 @@ public class LyricsOverlayService : Service
             }
         }
 
-        // Publish real-time lyrics to SuperLyric (Xposed module), if available.
-        _superLyricPublisher = new SuperLyricPublisher(_viewModel);
-        _superLyricPublisher.Connect();
+        // Publish real-time lyrics to SuperLyric (Xposed module), if the user has it enabled.
+        if (global::Microsoft.Maui.Storage.Preferences.Get(SuperLyricService.PrefSuperLyricEnabled, false))
+        {
+            _superLyricPublisher = new SuperLyricPublisher(_viewModel);
+            _superLyricPublisher.Connect();
+        }
 
         // Notify page and other observers that startup succeeded (on main thread).
         RunOnMainThread(() => OverlayStartResult?.Invoke(null));
