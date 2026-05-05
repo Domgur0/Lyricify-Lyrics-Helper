@@ -226,7 +226,12 @@ public class LyricsOverlayService : Service
         if (global::Microsoft.Maui.Storage.Preferences.Get(SuperLyricService.PrefSuperLyricEnabled, false)
             && !SuperLyricService.IsRunning)
         {
-            try { StartForegroundService(new Intent(this, typeof(SuperLyricService))); }
+            try
+            {
+#pragma warning disable CA1416
+                StartForegroundService(new Intent(this, typeof(SuperLyricService)));
+#pragma warning restore CA1416
+            }
             catch (Exception ex)
             {
                 Log.Debug(LogTag, $"Could not restart SuperLyricService from OnDestroy: {ex.Message}");
@@ -237,7 +242,12 @@ public class LyricsOverlayService : Service
         if (global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false)
             && !FlymeStatusBarService.IsRunning)
         {
-            try { StartForegroundService(new Intent(this, typeof(FlymeStatusBarService))); }
+            try
+            {
+#pragma warning disable CA1416
+                StartForegroundService(new Intent(this, typeof(FlymeStatusBarService)));
+#pragma warning restore CA1416
+            }
             catch (Exception ex)
             {
                 Log.Debug(LogTag, $"Could not restart FlymeStatusBarService from OnDestroy: {ex.Message}");
@@ -990,7 +1000,7 @@ public class LyricsOverlayService : Service
             if (global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false))
                 _flymePublisher?.Publish(_viewModel?.CurrentLineText, ResolvePlaybackStatusIcon());
         }
-        catch (OperationCanceledException) { }
+        catch (System.OperationCanceledException) { }
         catch (Exception ex)
         {
             Log.Warn(LogTag, $"Error in Flyme ticker delay: {ex.Message}");

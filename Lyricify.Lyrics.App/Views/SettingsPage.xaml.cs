@@ -133,8 +133,10 @@ public partial class SettingsPage : ContentPage
             if (!Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning
                 && !Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService.IsRunning)
             {
+#pragma warning disable CA1416
                 context.StartForegroundService(new Android.Content.Intent(
                     context, typeof(Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService)));
+#pragma warning restore CA1416
             }
         }
         else
@@ -156,8 +158,10 @@ public partial class SettingsPage : ContentPage
             if (!Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning
                 && !Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.IsRunning)
             {
+#pragma warning disable CA1416
                 context.StartForegroundService(new Android.Content.Intent(
                     context, typeof(Lyricify.Lyrics.App.Platforms.Android.SuperLyricService)));
+#pragma warning restore CA1416
             }
         }
         else
@@ -248,7 +252,7 @@ public partial class SettingsPage : ContentPage
 
     private async Task PromptCrashExportAsync()
     {
-        bool export = await DisplayAlert(
+        bool export = await DisplayAlertAsync(
             "检测到崩溃记录",
             "上次运行时应用崩溃，已捕获崩溃日志。是否立即导出以便反馈？",
             "导出",

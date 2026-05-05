@@ -2,6 +2,7 @@ using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Runtime;
+using Android.Util;
 using Lyricify.Lyrics.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading;
@@ -156,10 +157,10 @@ public class FlymeStatusBarService : Service
             await Task.Delay(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(false);
             PublishCurrentLyric();
         }
-        catch (OperationCanceledException) { }
+        catch (System.OperationCanceledException) { }
         catch (Exception ex)
         {
-            Android.Util.Log.Warn("LyricifyFlyme", $"Error in Flyme ticker delay: {ex.Message}");
+            Log.Warn("LyricifyFlyme", $"Error in Flyme ticker delay: {ex.Message}");
         }
         finally
         {
