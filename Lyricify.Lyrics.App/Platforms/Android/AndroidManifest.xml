@@ -39,5 +39,11 @@
             android:name=".SuperLyricService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
+
+        <!-- Flyme status-bar lyrics standalone foreground service (no overlay window) -->
+        <service
+            android:name=".FlymeStatusBarService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
     </application>
 </manifest>
