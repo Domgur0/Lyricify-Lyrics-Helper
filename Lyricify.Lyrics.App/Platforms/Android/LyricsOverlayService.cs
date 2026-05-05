@@ -1001,6 +1001,10 @@ public class LyricsOverlayService : Service
                 _flymePublisher?.Publish(_viewModel?.CurrentLineText, ResolvePlaybackStatusIcon());
         }
         catch (System.OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Log.Warn(LogTag, $"Error in Flyme ticker delay: {ex.Message}");
+        }
         finally
         {
             if (ReferenceEquals(_flymeTrackChangeCts, cts))
