@@ -33,6 +33,9 @@ public class FlymeStatusBarService : Service
 
     // Shared with LyricsOverlayService — both services use the same notification channel.
     private const string ChannelId = "lyricify_overlay";
+    // 1001 = LyricsOverlayService foreground, 1002 = LyricsOverlayService error,
+    // 1003 = SuperLyricService foreground, 1004 = LyricsOverlayService Flyme ticker,
+    // 1005 = this service's foreground notification, 1006 = Flyme ticker notification.
     private const int NotificationId = 1005;
     private const int FlymeNotificationId = 1006;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
@@ -95,9 +98,7 @@ public class FlymeStatusBarService : Service
     {
         Interlocked.Exchange(ref _isRunning, 0);
 
-        _trackChangeCts?.Cancel();
-        _trackChangeCts?.Dispose();
-        _trackChangeCts = null;
+        CancelAndDisposeCts(ref _trackChangeCts);
 
         if (_viewModel is not null)
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -118,7 +119,7 @@ public class FlymeStatusBarService : Service
         {
             case nameof(LyricsViewModel.CurrentLineText):
                 // Lyric line changed — cancel any pending track-change delay and publish now.
-                _trackChangeCts?.Cancel();
+                CancelAndDisposeCts(ref _trackChangeCts);
                 PublishCurrentLyric();
                 break;
 
@@ -133,7 +134,7 @@ public class FlymeStatusBarService : Service
 
             case nameof(LyricsViewModel.IsTrackLoaded) when !_viewModel.IsTrackLoaded:
                 // Playback stopped — cancel any pending update and clear the ticker.
-                _trackChangeCts?.Cancel();
+                CancelAndDisposeCts(ref _trackChangeCts);
                 _flymePublisher?.Publish(null, ResolvePlaybackStatusIcon());
                 break;
         }
@@ -147,7 +148,7 @@ public class FlymeStatusBarService : Service
     /// </summary>
     private async Task PublishAfterTrackChangeDelayAsync()
     {
-        _trackChangeCts?.Cancel();
+        CancelAndDisposeCts(ref _trackChangeCts);
         var cts = new CancellationTokenSource();
         _trackChangeCts = cts;
         try
@@ -156,6 +157,10 @@ public class FlymeStatusBarService : Service
             PublishCurrentLyric();
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Android.Util.Log.Warn("LyricifyFlyme", $"Error in Flyme ticker delay: {ex.Message}");
+        }
         finally
         {
             if (ReferenceEquals(_trackChangeCts, cts))
@@ -164,6 +169,18 @@ public class FlymeStatusBarService : Service
                 cts.Dispose();
             }
         }
+    }
+
+    /// <summary>
+    /// Thread-safe cancel + dispose of a <see cref="CancellationTokenSource"/> field.
+    /// Sets the field to <c>null</c> after disposal.
+    /// </summary>
+    private static void CancelAndDisposeCts(ref CancellationTokenSource? cts)
+    {
+        var old = Interlocked.Exchange(ref cts, null);
+        if (old is null) return;
+        try { old.Cancel(); } catch { }
+        old.Dispose();
     }
 
     private void PublishCurrentLyric()

@@ -217,9 +217,7 @@ public class LyricsOverlayService : Service
         _superLyricPublisher?.Dispose();
         _superLyricPublisher = null;
 
-        _flymeTrackChangeCts?.Cancel();
-        _flymeTrackChangeCts?.Dispose();
-        _flymeTrackChangeCts = null;
+        CancelAndDisposeFlymeTrackChangeCts();
 
         _flymePublisher?.Dispose();
         _flymePublisher = null;
@@ -689,7 +687,7 @@ public class LyricsOverlayService : Service
 
             case nameof(LyricsViewModel.IsTrackLoaded) when !_viewModel.IsTrackLoaded:
                 // Playback stopped — cancel any pending update and clear the ticker.
-                _flymeTrackChangeCts?.Cancel();
+                CancelAndDisposeFlymeTrackChangeCts();
                 _flymePublisher?.Publish(null, ResolvePlaybackStatusIcon());
                 break;
         }
@@ -970,10 +968,10 @@ public class LyricsOverlayService : Service
     /// </summary>
     private void PublishFlymeTicker()
     {
-        _flymeTrackChangeCts?.Cancel();
-        var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false);
-        var lyric = flymeEnabled ? _viewModel?.CurrentLineText : null;
-        _flymePublisher?.Publish(lyric, ResolvePlaybackStatusIcon());
+        CancelAndDisposeFlymeTrackChangeCts();
+        if (!global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false))
+            return;
+        _flymePublisher?.Publish(_viewModel?.CurrentLineText, ResolvePlaybackStatusIcon());
     }
 
     /// <summary>
@@ -983,17 +981,20 @@ public class LyricsOverlayService : Service
     /// </summary>
     private async Task PublishFlymeTickerAfterDelayAsync()
     {
-        _flymeTrackChangeCts?.Cancel();
+        CancelAndDisposeFlymeTrackChangeCts();
         var cts = new CancellationTokenSource();
         _flymeTrackChangeCts = cts;
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(false);
-            var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false);
-            var lyric = flymeEnabled ? _viewModel?.CurrentLineText : null;
-            _flymePublisher?.Publish(lyric, ResolvePlaybackStatusIcon());
+            if (global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false))
+                _flymePublisher?.Publish(_viewModel?.CurrentLineText, ResolvePlaybackStatusIcon());
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Log.Warn(LogTag, $"Error in Flyme ticker delay: {ex.Message}");
+        }
         finally
         {
             if (ReferenceEquals(_flymeTrackChangeCts, cts))
@@ -1002,6 +1003,17 @@ public class LyricsOverlayService : Service
                 cts.Dispose();
             }
         }
+    }
+
+    /// <summary>
+    /// Thread-safe cancel + dispose of <see cref="_flymeTrackChangeCts"/>.
+    /// </summary>
+    private void CancelAndDisposeFlymeTrackChangeCts()
+    {
+        var old = Interlocked.Exchange(ref _flymeTrackChangeCts, null);
+        if (old is null) return;
+        try { old.Cancel(); } catch { }
+        old.Dispose();
     }
 
     private int ResolvePlaybackStatusIcon()
