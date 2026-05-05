@@ -168,7 +168,7 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Debug(LogTag, $"TryGetJavaPublicField({fieldName}) failed: {ex.GetType().Name} — {ex.Message}");
+            Log.Debug(LogTag, $"TryGetJavaPublicField({fieldName}) failed unexpectedly: {ex.GetType().Name} — {ex.Message}");
             return null;
         }
     }
