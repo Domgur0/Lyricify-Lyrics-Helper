@@ -69,6 +69,41 @@ public class LyricsService
         return lyricsData;
     }
 
+    /// <summary>
+    /// Fetches and parses lyrics using only the track metadata (no Spotify track ID).
+    /// Skips the Spotify-internal lyrics strategy and searches the remaining providers
+    /// (Netease → QQ Music → Kugou → LRCLIB) by title and artist.
+    /// Use this overload in compatibility mode where the source app is not Spotify.
+    /// </summary>
+    /// <param name="title">Track title.</param>
+    /// <param name="artist">Primary artist name.</param>
+    /// <param name="durationMs">Track duration in milliseconds (used for match scoring).</param>
+    public async Task<LyricsData?> GetLyricsAsync(string title, string artist, int durationMs)
+    {
+        var cacheKey = $"compat_{Uri.EscapeDataString(title)}_{Uri.EscapeDataString(artist)}";
+        if (_cache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        var metadata = new TrackMultiArtistMetadata
+        {
+            Title = title,
+            Artists = new List<string> { artist },
+            AlbumArtists = new List<string> { artist },
+            DurationMs = durationMs,
+        };
+
+        LyricsData? lyricsData = null;
+
+        // Skip Spotify (no track ID available); try the remaining fallback chain.
+        lyricsData ??= await TryGetNeteaseAsync(metadata);
+        lyricsData ??= await TryGetQQMusicAsync(metadata);
+        lyricsData ??= await TryGetKugouAsync(metadata);
+        lyricsData ??= await TryGetLrcLibLyricsAsync(metadata);
+
+        _cache[cacheKey] = lyricsData;
+        return lyricsData;
+    }
+
     /// <summary>Evicts a single track from the cache (e.g. after an explicit refresh).</summary>
     public void InvalidateCache(string trackId) => _cache.Remove(trackId);
 

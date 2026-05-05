@@ -20,6 +20,10 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     private readonly LyricsSyncService _syncService;
     private int _trackLoadVersion;
 
+#if ANDROID
+    private Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService? _compatService;
+#endif
+
     // ── Observable properties ─────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -117,6 +121,11 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
         _nowPlayingService.AuthenticationFailed += OnAuthenticationFailed;
         _syncService.SyncResultUpdated += OnSyncResultUpdated;
 
+#if ANDROID
+        if (Preferences.Get(Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.PrefCompatibilityModeEnabled, false))
+            LyricsStatusMessage = "兼容模式：等待媒体播放";
+        else
+#endif
         if (!_oauthService.HasValidToken)
             LyricsStatusMessage = "未登录，请长按封面进入设置登录";
         else
@@ -128,6 +137,20 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public void StartPolling()
     {
+#if ANDROID
+        if (Preferences.Get(Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.PrefCompatibilityModeEnabled, false))
+        {
+            // Compatibility mode: use MediaController instead of Spotify.
+            _nowPlayingService.Stop();
+            EnsureCompatibilityService();
+            _compatService?.Start();
+            _syncService.Start();
+            return;
+        }
+
+        // Normal mode: ensure the compatibility service is stopped.
+        _compatService?.Stop();
+#endif
         _nowPlayingService.Start();
         _syncService.Start();
     }
@@ -137,9 +160,12 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
     {
         _nowPlayingService.Stop();
         _syncService.Stop();
+#if ANDROID
+        _compatService?.Stop();
+#endif
     }
 
-    // ── Event handlers ────────────────────────────────────────────────────────
+    // ── Spotify event handlers ────────────────────────────────────────────────
 
     private async void OnTrackChanged(object? sender, SpotifyCurrentlyPlayingItem? item)
     {
@@ -303,11 +329,116 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
         });
     }
 
+#if ANDROID
+    // ── Compatibility mode (MediaController) event handlers ───────────────────
+
+    private void EnsureCompatibilityService()
+    {
+        if (_compatService is not null) return;
+        _compatService = new Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService();
+        _compatService.TrackChanged += OnCompatibilityTrackChanged;
+        _compatService.StateUpdated += OnCompatibilityStateUpdated;
+    }
+
+    private async void OnCompatibilityTrackChanged(
+        object? sender,
+        Lyricify.Lyrics.App.Platforms.Android.MediaTrackInfo? info)
+    {
+        var requestVersion = Interlocked.Increment(ref _trackLoadVersion);
+
+        if (info is null)
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                TrackTitle = string.Empty;
+                ArtistName = string.Empty;
+                AlbumArtUrl = string.Empty;
+                LyricLines = new();
+                HasLyrics = false;
+                IsTrackLoaded = false;
+                IsLoadingLyrics = false;
+                CurrentLineText = string.Empty;
+                NextLineText = string.Empty;
+                _syncService.SetLyrics(null);
+                LyricsStatusMessage = "兼容模式：等待媒体播放";
+            });
+            return;
+        }
+
+        var trackTitle = info.Title;
+        var artistName = info.Artist;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            IsTrackLoaded = true;
+            TrackTitle = trackTitle;
+            ArtistName = artistName;
+            AlbumArtUrl = string.Empty;
+            CurrentLineText = trackTitle;
+            NextLineText = artistName;
+            IsLoadingLyrics = true;
+            HasLyrics = false;
+            LyricsStatusMessage = string.Empty;
+        });
+
+        LyricsData? lyricsData = null;
+        try
+        {
+            lyricsData = await _lyricsService.GetLyricsAsync(info.Title, info.Artist, info.DurationMs);
+        }
+        catch (Exception)
+        {
+            lyricsData = null;
+        }
+
+        if (requestVersion != Volatile.Read(ref _trackLoadVersion))
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (requestVersion != Volatile.Read(ref _trackLoadVersion))
+                return;
+
+            LyricLines = lyricsData?.Lines ?? new List<ILineInfo>();
+            HasLyrics = LyricLines.Count > 0;
+            _syncService.SetLyrics(lyricsData);
+            if (!HasLyrics)
+            {
+                CurrentLineText = TrackTitle;
+                NextLineText = ArtistName;
+                LyricsStatusMessage = "未获取到歌词";
+            }
+
+            IsLoadingLyrics = false;
+        });
+    }
+
+    private void OnCompatibilityStateUpdated(
+        object? sender,
+        Lyricify.Lyrics.App.Platforms.Android.MediaPlaybackState state)
+    {
+        IsPlaying = state.IsPlaying;
+        _syncService.UpdatePosition(state.PositionMs, state.IsPlaying);
+    }
+#endif
+
+    // ── Dispose ───────────────────────────────────────────────────────────────
+
     public void Dispose()
     {
         _nowPlayingService.TrackChanged -= OnTrackChanged;
         _nowPlayingService.StateUpdated -= OnStateUpdated;
         _nowPlayingService.AuthenticationFailed -= OnAuthenticationFailed;
         _syncService.SyncResultUpdated -= OnSyncResultUpdated;
+#if ANDROID
+        if (_compatService is not null)
+        {
+            _compatService.TrackChanged -= OnCompatibilityTrackChanged;
+            _compatService.StateUpdated -= OnCompatibilityStateUpdated;
+            _compatService.Dispose();
+            _compatService = null;
+        }
+#endif
     }
 }
+

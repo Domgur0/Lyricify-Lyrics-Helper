@@ -289,6 +289,58 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- ── Compatibility Mode (Android only) ─────────────────────── -->
+            <Label
+                Text="兼容模式"
+                TextColor="White"
+                FontSize="18"
+                FontAttributes="Bold"
+                IsVisible="{OnPlatform Default=False, Android=True}" />
+
+            <Border
+                Background="#1A1A1A"
+                Stroke="#333333"
+                Padding="16"
+                IsVisible="{OnPlatform Default=False, Android=True}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="12">
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                            <Label
+                                Text="启用兼容模式"
+                                TextColor="{StaticResource InactiveLineColor}"
+                                FontSize="13" />
+                            <Label
+                                Text="通过系统媒体会话获取正在播放的曲目，适用于非 Spotify 应用"
+                                TextColor="#888888"
+                                FontSize="11" />
+                        </VerticalStackLayout>
+                        <Switch
+                            x:Name="CompatibilityModeSwitch"
+                            Grid.Column="1"
+                            Toggled="OnCompatibilityModeToggled"
+                            OnColor="{StaticResource ActiveLineColor}" />
+                    </Grid>
+
+                    <Label
+                        Text="启用后需授予通知访问权限，应用才能读取系统媒体信息。"
+                        TextColor="#888888"
+                        FontSize="11" />
+
+                    <Button
+                        Text="授予通知访问权限"
+                        BackgroundColor="#333333"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        Clicked="OnNotificationAccessClicked" />
+
+                </VerticalStackLayout>
+            </Border>
+
             <!-- ── About ─────────────────────────────────────────────────── -->
             <Label Text="About" TextColor="White" FontSize="18" FontAttributes="Bold" />
             <Border Background="#1A1A1A" Stroke="#333333" Padding="16">
