@@ -41,12 +41,7 @@ public class LyricsOverlayService : Service
     private const int ErrorNotificationId = 1002;
     private const int ForegroundServiceTypeSpecialUseValue = 0x40000000;
     private const int DefaultDisplayId = 0;
-    private const string FlymeShowTickerFlagName = "FLAG_ALWAYS_SHOW_TICKER";
-    private const string FlymeUpdateTickerFlagName = "FLAG_ONLY_UPDATE_TICKER";
-    private const int FlymeShowTickerFlagFallback = 0x1000000; // FLAG_ALWAYS_SHOW_TICKER
-    private const int FlymeUpdateTickerFlagFallback = 0x2000000; // FLAG_ONLY_UPDATE_TICKER
-    private const string FlymeTickerIconSwitchKey = "ticker_icon_switch";
-    private const string FlymeTickerIconKey = "ticker_icon";
+    private const int FlymeNotificationId = 1004;
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
     public const string PrefFlymeStatusBarEnabled = "flyme_status_bar_enabled";
     private const string PrefOverlayOpacity = "overlay_opacity";
@@ -73,16 +68,12 @@ public class LyricsOverlayService : Service
     private bool _overlayViewAttached;
     private LyricsViewModel? _viewModel;
     private SuperLyricPublisher? _superLyricPublisher;
+    private FlymeStatusBarPublisher? _flymePublisher;
     private bool _overlayLocked;
     private static int _isRunning;
     private static WeakReference<Context>? _preferredWindowContext;
-    private static readonly Lazy<FlymeTickerFlagSet> FlymeTickerFlags = new(ResolveFlymeTickerFlags);
     public static bool IsRunning => Interlocked.CompareExchange(ref _isRunning, 0, 0) == 1;
 
-    private readonly record struct FlymeTickerFlagSet(int ShowTickerFlag, int UpdateTickerFlag)
-    {
-        public bool IsSupported => ShowTickerFlag > 0 && UpdateTickerFlag > 0;
-    }
 
     /// <summary>
     /// Non-null when the last service startup attempt ended in failure.
@@ -118,6 +109,7 @@ public class LyricsOverlayService : Service
 
         // Start in foreground immediately to satisfy the StartForegroundService contract.
         CreateNotificationChannel();
+        _flymePublisher = new FlymeStatusBarPublisher(this, ChannelId, FlymeNotificationId);
         var notification = BuildNotification("Lyricify is running", "Tap to open");
         // On Android 14+ (API 34) startForeground must declare the matching service type.
         if (OperatingSystem.IsAndroidVersionAtLeast(34))
@@ -211,6 +203,9 @@ public class LyricsOverlayService : Service
 
         _superLyricPublisher?.Dispose();
         _superLyricPublisher = null;
+
+        _flymePublisher?.Dispose();
+        _flymePublisher = null;
 
         // If the user has standalone SuperLyric enabled, hand publishing back to SuperLyricService.
         if (global::Microsoft.Maui.Storage.Preferences.Get(SuperLyricService.PrefSuperLyricEnabled, false)
@@ -852,7 +847,7 @@ public class LyricsOverlayService : Service
     }
 
 #pragma warning disable CA1416 // Validate platform compatibility
-    private Notification BuildNotification(string title, string text, string? tickerText = null)
+    private Notification BuildNotification(string title, string text)
     {
         var pendingIntent = PendingIntent.GetActivity(
             this,
@@ -895,38 +890,8 @@ public class LyricsOverlayService : Service
             }
         }
 
-        var flymeTickerFlags = FlymeTickerFlags.Value;
-        var hasTickerText = !string.IsNullOrWhiteSpace(tickerText);
-        if (flymeTickerFlags.IsSupported)
-            builder.SetTicker(hasTickerText ? tickerText : null);
-
         var notification = builder.Build()!;
         notification.Flags |= NotificationFlags.NoClear;
-
-        if (flymeTickerFlags.IsSupported)
-        {
-            if (OperatingSystem.IsAndroidVersionAtLeast(19))
-            {
-                notification.Extras?.PutBoolean(FlymeTickerIconSwitchKey, false);
-                notification.Extras?.PutInt(FlymeTickerIconKey, ResolvePlaybackStatusIcon());
-            }
-
-            if (hasTickerText)
-            {
-                notification.Flags = (NotificationFlags)(
-                    (int)notification.Flags |
-                    flymeTickerFlags.ShowTickerFlag |
-                    flymeTickerFlags.UpdateTickerFlag);
-            }
-            else
-            {
-                notification.Flags = (NotificationFlags)(
-                    (int)notification.Flags &
-                    ~flymeTickerFlags.ShowTickerFlag &
-                    ~flymeTickerFlags.UpdateTickerFlag);
-            }
-        }
-
         return notification;
     }
 #pragma warning restore CA1416
@@ -943,12 +908,15 @@ public class LyricsOverlayService : Service
         var text = string.IsNullOrWhiteSpace(_viewModel?.ArtistName)
             ? "Tap to open"
             : _viewModel.ArtistName;
-        var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(PrefFlymeStatusBarEnabled, false);
-        var tickerText = includeTicker && flymeEnabled && !string.IsNullOrWhiteSpace(_viewModel?.CurrentLineText)
-            ? _viewModel.CurrentLineText
-            : null;
 
-        manager.Notify(NotificationId, BuildNotification(title, text, tickerText));
+        manager.Notify(NotificationId, BuildNotification(title, text));
+
+        if (includeTicker)
+        {
+            var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(PrefFlymeStatusBarEnabled, false);
+            var lyric = flymeEnabled ? _viewModel?.CurrentLineText : null;
+            _flymePublisher?.Publish(lyric, ResolvePlaybackStatusIcon());
+        }
     }
 
     private int ResolvePlaybackStatusIcon()
@@ -956,59 +924,5 @@ public class LyricsOverlayService : Service
         if (_viewModel?.IsPlaying == true)
             return global::Android.Resource.Drawable.IcMediaPause;
         return global::Android.Resource.Drawable.IcMediaPlay;
-    }
-
-    private static FlymeTickerFlagSet ResolveFlymeTickerFlags()
-    {
-        // The Flyme-specific Notification flag constants (FLAG_ALWAYS_SHOW_TICKER,
-        // FLAG_ONLY_UPDATE_TICKER) exist only on the Java android.app.Notification class
-        // as ROM-level extensions on Meizu/Flyme devices.  C# reflection on the .NET
-        // wrapper class (typeof(Notification).GetField(...)) cannot see them because the
-        // .NET binding is compiled against the standard Android SDK, not the Flyme ROM.
-        // We use Java reflection via Java.Lang.Class to reach the actual runtime class.
-        try
-        {
-            using var notifClass = Java.Lang.Class.ForName("android.app.Notification");
-
-            using var showField = TryGetJavaPublicField(notifClass, FlymeShowTickerFlagName);
-            using var updateField = TryGetJavaPublicField(notifClass, FlymeUpdateTickerFlagName);
-
-            if (showField is not null && updateField is not null)
-                return new FlymeTickerFlagSet(showField.GetInt(null), updateField.GetInt(null));
-
-            Log.Debug(LogTag, "Flyme ticker flags not found in android.app.Notification — falling back to hardcoded Meizu values.");
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(LogTag, $"Flyme ticker flags unavailable ({ex.GetType().Name}): {ex.Message} — falling back to hardcoded Meizu values.");
-        }
-
-        // Fallback to the well-known Meizu/Flyme constant values.
-        // These are the exact flags checked by the meizu-provider Xposed module
-        // (FLAG_MEIZU_TICKER = FLAG_ALWAYS_SHOW_TICKER | FLAG_ONLY_UPDATE_TICKER), so
-        // setting them lets meizu-provider capture lyrics even on non-Flyme devices.
-        return new FlymeTickerFlagSet(FlymeShowTickerFlagFallback, FlymeUpdateTickerFlagFallback);
-    }
-
-    /// <summary>
-    /// Returns the named public field of <paramref name="cls"/>, or <c>null</c> if the
-    /// field does not exist (i.e. the device is not running a ROM that declares it).
-    /// </summary>
-    private static Java.Lang.Reflect.Field? TryGetJavaPublicField(Java.Lang.Class cls, string fieldName)
-    {
-        try
-        {
-            return cls.GetField(fieldName);
-        }
-        catch (Java.Lang.NoSuchFieldException)
-        {
-            // Field is absent on this ROM — not a Flyme/Meizu device, or field name changed.
-            return null;
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(LogTag, $"TryGetJavaPublicField({fieldName}) failed unexpectedly: {ex.GetType().Name} — {ex.Message}");
-            return null;
-        }
     }
 }
