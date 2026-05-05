@@ -62,13 +62,15 @@ public sealed class MediaControllerNowPlayingService : IDisposable
             {
                 PollMediaSession();
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallow all errors (e.g. SecurityException when notification
-                // listener access has not been granted yet).
+                // Log at debug level so permission/config problems are diagnosable
+                // without impacting normal operation.
+                global::System.Diagnostics.Debug.WriteLine(
+                    $"[MediaControllerNowPlayingService] Poll error: {ex.GetType().Name}: {ex.Message}");
             }
 
-            await Task.Delay(500, ct).ConfigureAwait(false);
+            await Task.Delay(1000, ct).ConfigureAwait(false);
         }
     }
 
@@ -91,9 +93,12 @@ public sealed class MediaControllerNowPlayingService : IDisposable
         {
             controllers = sessionManager.GetActiveSessions(componentName);
         }
-        catch
+        catch (Exception ex)
         {
-            // SecurityException – notification listener access not granted.
+            // Catches SecurityException (notification listener not granted) and any
+            // other unexpected errors. Both are non-fatal – just skip this poll tick.
+            global::System.Diagnostics.Debug.WriteLine(
+                $"[MediaControllerNowPlayingService] GetActiveSessions failed: {ex.GetType().Name}: {ex.Message}");
             return;
         }
 

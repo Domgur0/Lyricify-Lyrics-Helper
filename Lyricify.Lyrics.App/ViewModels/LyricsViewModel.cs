@@ -143,7 +143,7 @@ public partial class LyricsViewModel : ObservableObject, IDisposable
             // Compatibility mode: use MediaController instead of Spotify.
             _nowPlayingService.Stop();
             EnsureCompatibilityService();
-            _compatService!.Start();
+            _compatService?.Start();
             _syncService.Start();
             return;
         }
