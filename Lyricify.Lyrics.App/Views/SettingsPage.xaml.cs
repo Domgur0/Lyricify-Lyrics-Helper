@@ -14,7 +14,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefOverlayEnabled = "overlay_enabled";
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
 #if ANDROID
-    private const string PrefFlymeStatusBarEnabled = Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.PrefFlymeStatusBarEnabled;
+    private const string PrefFlymeStatusBarEnabled = Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService.PrefFlymeStatusBarEnabled;
     private const string PrefSuperLyricEnabled = Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.PrefSuperLyricEnabled;
 #endif
 
@@ -126,6 +126,22 @@ public partial class SettingsPage : ContentPage
     {
 #if ANDROID
         Preferences.Set(PrefFlymeStatusBarEnabled, e.Value);
+        var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+        if (e.Value)
+        {
+            // Start the standalone service only when the overlay isn't already handling Flyme.
+            if (!Lyricify.Lyrics.App.Platforms.Android.LyricsOverlayService.IsRunning
+                && !Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService.IsRunning)
+            {
+                context.StartForegroundService(new Android.Content.Intent(
+                    context, typeof(Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService)));
+            }
+        }
+        else
+        {
+            context.StopService(new Android.Content.Intent(
+                context, typeof(Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService)));
+        }
 #endif
     }
 

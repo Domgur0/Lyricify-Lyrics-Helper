@@ -43,7 +43,6 @@ public class LyricsOverlayService : Service
     private const int DefaultDisplayId = 0;
     private const int FlymeNotificationId = 1004;
     private const string PrefOverlayLyricColor = "overlay_lyric_color";
-    public const string PrefFlymeStatusBarEnabled = "flyme_status_bar_enabled";
     private const string PrefOverlayOpacity = "overlay_opacity";
     private const string PrefOverlayShouldRun = "overlay_should_run";
     private const string PrefOverlayPosX = "overlay_position_x";
@@ -69,6 +68,7 @@ public class LyricsOverlayService : Service
     private LyricsViewModel? _viewModel;
     private SuperLyricPublisher? _superLyricPublisher;
     private FlymeStatusBarPublisher? _flymePublisher;
+    private CancellationTokenSource? _flymeTrackChangeCts;
     private bool _overlayLocked;
     private static int _isRunning;
     private static WeakReference<Context>? _preferredWindowContext;
@@ -160,6 +160,16 @@ public class LyricsOverlayService : Service
             }
         }
 
+        // If the standalone Flyme service is running, stop it — overlay takes over publishing.
+        if (FlymeStatusBarService.IsRunning)
+        {
+            try { StopService(new Intent(this, typeof(FlymeStatusBarService))); }
+            catch (Exception ex)
+            {
+                Log.Debug(LogTag, $"Could not stop FlymeStatusBarService: {ex.Message}");
+            }
+        }
+
         // Publish real-time lyrics to SuperLyric (Xposed module), if the user has it enabled.
         if (global::Microsoft.Maui.Storage.Preferences.Get(SuperLyricService.PrefSuperLyricEnabled, false))
         {
@@ -207,6 +217,10 @@ public class LyricsOverlayService : Service
         _superLyricPublisher?.Dispose();
         _superLyricPublisher = null;
 
+        _flymeTrackChangeCts?.Cancel();
+        _flymeTrackChangeCts?.Dispose();
+        _flymeTrackChangeCts = null;
+
         _flymePublisher?.Dispose();
         _flymePublisher = null;
 
@@ -218,6 +232,17 @@ public class LyricsOverlayService : Service
             catch (Exception ex)
             {
                 Log.Debug(LogTag, $"Could not restart SuperLyricService from OnDestroy: {ex.Message}");
+            }
+        }
+
+        // If the user has Flyme status-bar lyrics enabled, hand publishing back to FlymeStatusBarService.
+        if (global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false)
+            && !FlymeStatusBarService.IsRunning)
+        {
+            try { StartForegroundService(new Intent(this, typeof(FlymeStatusBarService))); }
+            catch (Exception ex)
+            {
+                Log.Debug(LogTag, $"Could not restart FlymeStatusBarService from OnDestroy: {ex.Message}");
             }
         }
 
@@ -631,7 +656,7 @@ public class LyricsOverlayService : Service
     {
         if (_viewModel is null) return;
 
-        // Forward lyric-line changes to the SuperLyric publisher.
+        // ── SuperLyric publisher ──────────────────────────────────────────────
         if (_superLyricPublisher is not null)
         {
             switch (e.PropertyName)
@@ -646,6 +671,30 @@ public class LyricsOverlayService : Service
             }
         }
 
+        // ── Flyme status-bar publisher ────────────────────────────────────────
+        switch (e.PropertyName)
+        {
+            case nameof(LyricsViewModel.CurrentLineText):
+                // Lyric line changed — cancel any pending track-change delay and publish now.
+                PublishFlymeTicker();
+                break;
+
+            case nameof(LyricsViewModel.TrackTitle):
+            case nameof(LyricsViewModel.ArtistName):
+                // Track changed — delay 1 second before pushing the Flyme ticker so the
+                // track-metadata notification update doesn't trigger Android's rate limiter
+                // and cause the first lyric update to be silently dropped.
+                _ = PublishFlymeTickerAfterDelayAsync();
+                break;
+
+            case nameof(LyricsViewModel.IsTrackLoaded) when !_viewModel.IsTrackLoaded:
+                // Playback stopped — cancel any pending update and clear the ticker.
+                _flymeTrackChangeCts?.Cancel();
+                _flymePublisher?.Publish(null, ResolvePlaybackStatusIcon());
+                break;
+        }
+
+        // ── Overlay view ──────────────────────────────────────────────────────
         if (_overlayView is null) return;
 
         switch (e.PropertyName)
@@ -654,7 +703,7 @@ public class LyricsOverlayService : Service
             case nameof(LyricsViewModel.NextLineText):
                 _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
                 if (e.PropertyName == nameof(LyricsViewModel.CurrentLineText))
-                    RefreshForegroundNotification(includeTicker: true);
+                    RefreshForegroundNotification();
                 break;
 
             case nameof(LyricsViewModel.LineProgress):
@@ -665,7 +714,7 @@ public class LyricsOverlayService : Service
             case nameof(LyricsViewModel.ArtistName):
             case nameof(LyricsViewModel.HasLyrics):
                 _overlayView.UpdateLines(_viewModel.CurrentLineText, _viewModel.NextLineText);
-                RefreshForegroundNotification(includeTicker: true);
+                RefreshForegroundNotification();
                 break;
         }
     }
@@ -733,7 +782,7 @@ public class LyricsOverlayService : Service
             LogDiagnostic("Failed to update overlay lock state.", ex);
         }
 
-        RefreshForegroundNotification(includeTicker: true);
+        RefreshForegroundNotification();
     }
 
     /// <summary>
@@ -899,7 +948,7 @@ public class LyricsOverlayService : Service
     }
 #pragma warning restore CA1416
 
-    private void RefreshForegroundNotification(bool includeTicker)
+    private void RefreshForegroundNotification()
     {
         var manager = GetSystemService(NotificationService) as NotificationManager;
         if (manager is null)
@@ -913,12 +962,45 @@ public class LyricsOverlayService : Service
             : _viewModel.ArtistName;
 
         manager.Notify(NotificationId, BuildNotification(title, text));
+    }
 
-        if (includeTicker)
+    /// <summary>
+    /// Publishes the current lyric to the Flyme status bar immediately, cancelling any
+    /// pending track-change delay.
+    /// </summary>
+    private void PublishFlymeTicker()
+    {
+        _flymeTrackChangeCts?.Cancel();
+        var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false);
+        var lyric = flymeEnabled ? _viewModel?.CurrentLineText : null;
+        _flymePublisher?.Publish(lyric, ResolvePlaybackStatusIcon());
+    }
+
+    /// <summary>
+    /// Schedules a Flyme ticker update after a 1-second delay, following the recommendation
+    /// in the Flyme documentation to avoid Android notification rate-limiting after a
+    /// track-change metadata notification.
+    /// </summary>
+    private async Task PublishFlymeTickerAfterDelayAsync()
+    {
+        _flymeTrackChangeCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _flymeTrackChangeCts = cts;
+        try
         {
-            var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(PrefFlymeStatusBarEnabled, false);
+            await Task.Delay(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(false);
+            var flymeEnabled = global::Microsoft.Maui.Storage.Preferences.Get(FlymeStatusBarService.PrefFlymeStatusBarEnabled, false);
             var lyric = flymeEnabled ? _viewModel?.CurrentLineText : null;
             _flymePublisher?.Publish(lyric, ResolvePlaybackStatusIcon());
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            if (ReferenceEquals(_flymeTrackChangeCts, cts))
+            {
+                _flymeTrackChangeCts = null;
+                cts.Dispose();
+            }
         }
     }
 
