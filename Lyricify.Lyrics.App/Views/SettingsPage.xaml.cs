@@ -16,6 +16,7 @@ public partial class SettingsPage : ContentPage
 #if ANDROID
     private const string PrefFlymeStatusBarEnabled = Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService.PrefFlymeStatusBarEnabled;
     private const string PrefSuperLyricEnabled = Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.PrefSuperLyricEnabled;
+    private const string PrefCompatibilityModeEnabled = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.PrefCompatibilityModeEnabled;
 #endif
 
     public SettingsPage()
@@ -172,6 +173,30 @@ public partial class SettingsPage : ContentPage
 #endif
     }
 
+    private void OnCompatibilityModeToggled(object sender, ToggledEventArgs e)
+    {
+#if ANDROID
+        Preferences.Set(PrefCompatibilityModeEnabled, e.Value);
+        // The next StartPolling() call (when LyricsPage becomes visible) picks up the new setting.
+#endif
+    }
+
+    private void OnNotificationAccessClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        try
+        {
+            var context = Platform.CurrentActivity ?? Android.App.Application.Context;
+            var intent = new Android.Content.Intent(Android.Provider.Settings.ActionNotificationListenerSettings);
+            context.StartActivity(intent);
+        }
+        catch (Exception ex)
+        {
+            _ = DisplayAlert("错误", $"无法打开通知访问设置：{ex.Message}", "OK");
+        }
+#endif
+    }
+
     private void OnUnlockOverlayClicked(object sender, EventArgs e)
     {
 #if ANDROID
@@ -234,6 +259,7 @@ public partial class SettingsPage : ContentPage
 #if ANDROID
         FlymeStatusBarSwitch.IsToggled = Preferences.Get(PrefFlymeStatusBarEnabled, false);
         SuperLyricEnabledSwitch.IsToggled = Preferences.Get(PrefSuperLyricEnabled, false);
+        CompatibilityModeSwitch.IsToggled = Preferences.Get(PrefCompatibilityModeEnabled, false);
 #endif
         UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
 
