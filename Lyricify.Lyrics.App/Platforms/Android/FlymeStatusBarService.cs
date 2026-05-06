@@ -136,7 +136,7 @@ public class FlymeStatusBarService : Service
             case nameof(LyricsViewModel.IsTrackLoaded) when !_viewModel.IsTrackLoaded:
                 // Playback stopped — cancel any pending update and clear the ticker.
                 CancelAndDisposeCts(ref _trackChangeCts);
-                _flymePublisher?.Publish(null, ResolvePlaybackStatusIcon());
+                _flymePublisher?.Publish(null, null, ResolvePlaybackStatusIcon());
                 break;
         }
     }
@@ -187,7 +187,8 @@ public class FlymeStatusBarService : Service
     private void PublishCurrentLyric()
     {
         var lyric = _viewModel?.CurrentLineText;
-        _flymePublisher?.Publish(lyric, ResolvePlaybackStatusIcon());
+        var songTitle = _viewModel?.TrackTitle;
+        _flymePublisher?.Publish(lyric, songTitle, ResolvePlaybackStatusIcon());
     }
 
     private int ResolvePlaybackStatusIcon()

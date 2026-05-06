@@ -46,16 +46,7 @@
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
-        <!-- Notification-listener stub used by compatibility mode to call
-             MediaSessionManager.GetActiveSessions(). The user must grant
-             notification-listener access via system settings. -->
-        <service
-            android:name=".MediaNotificationListenerService"
-            android:exported="true"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+        <!-- MediaNotificationListenerService is declared via [Service] and [IntentFilter]
+             attributes on the class, so no hand-written entry is needed here. -->
     </application>
 </manifest>
