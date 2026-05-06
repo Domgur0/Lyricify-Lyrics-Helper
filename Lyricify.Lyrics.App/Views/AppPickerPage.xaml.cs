@@ -70,11 +70,14 @@ public partial class AppPickerPage : ContentPage
     {
         if (e.CurrentSelection.FirstOrDefault() is not InstalledAppInfo appInfo) return;
 
-        // Clear selection immediately to allow re-selecting the same item.
-        ((CollectionView)sender).SelectedItem = null;
-
+        // Raise before popping so the caller can act synchronously if needed.
         AppPicked?.Invoke(this, appInfo.PackageName);
+
         await Navigation.PopModalAsync();
+
+        // Clear selection after the page has been dismissed so any re-open
+        // of the same picker instance starts with a clean state.
+        ((CollectionView)sender).SelectedItem = null;
     }
 
     private async void OnCancelClicked(object sender, EventArgs e)

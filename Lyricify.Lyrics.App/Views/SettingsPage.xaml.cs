@@ -283,9 +283,16 @@ public partial class SettingsPage : ContentPage
     }
 
     // Referenced from XAML – must compile on all platforms; body is Android-only.
-    private async void OnPickAppClicked(object sender, EventArgs e)
+    private void OnPickAppClicked(object sender, EventArgs e)
     {
 #if ANDROID
+        _ = PushAppPickerAsync();
+#endif
+    }
+
+#if ANDROID
+    private async Task PushAppPickerAsync()
+    {
         var pickerPage = new AppPickerPage();
         pickerPage.AppPicked += (_, pkg) =>
         {
@@ -293,14 +300,13 @@ public partial class SettingsPage : ContentPage
             if (whitelist.Add(pkg))
             {
                 Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
-                MainThread.BeginInvokeOnMainThread(RefreshWhitelistUI);
+                // AppPicked is raised from the PopModalAsync continuation on the main thread.
+                RefreshWhitelistUI();
             }
         };
         await Navigation.PushModalAsync(pickerPage);
-#else
-        await Task.CompletedTask;
-#endif
     }
+#endif
 
     private void OnUnlockOverlayClicked(object sender, EventArgs e)
     {

@@ -103,8 +103,10 @@ public sealed class MediaControllerNowPlayingService : IDisposable
             var appInfo = pm.GetApplicationInfo(packageName, PackageInfoFlags.MetaData);
             return appInfo?.LoadLabel(pm)?.ToString() ?? packageName;
         }
-        catch
+        catch (Exception ex)
         {
+            global::System.Diagnostics.Debug.WriteLine(
+                $"[MediaControllerNowPlayingService] GetAppLabel({packageName}) failed: {ex.GetType().Name}: {ex.Message}");
             return packageName;
         }
     }
