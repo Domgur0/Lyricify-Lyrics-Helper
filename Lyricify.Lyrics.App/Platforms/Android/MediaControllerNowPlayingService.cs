@@ -1,6 +1,7 @@
 using Android.Content;
 using Android.Media;
 using Android.Media.Session;
+using System.Linq;
 
 namespace Lyricify.Lyrics.App.Platforms.Android;
 
@@ -16,6 +17,46 @@ public sealed class MediaControllerNowPlayingService : IDisposable
 {
     /// <summary>Preference key for the compatibility-mode enabled flag.</summary>
     public const string PrefCompatibilityModeEnabled = "compatibility_mode_enabled";
+
+    /// <summary>
+    /// Preference key for the whitelist of app package names considered in
+    /// compatibility mode.  The value is a semicolon-separated list of package
+    /// names (e.g. <c>com.spotify.music;com.netease.cloudmusic</c>).
+    /// When the preference is empty or absent, all media sessions are considered.
+    /// </summary>
+    public const string PrefCompatibilityModeWhitelist = "compatibility_mode_whitelist";
+
+    /// <summary>
+    /// Parses the persisted whitelist preference into a set of package names.
+    /// Returns an empty set when no whitelist is configured.
+    /// </summary>
+    public static HashSet<string> GetWhitelist()
+    {
+        var raw = Preferences.Get(PrefCompatibilityModeWhitelist, string.Empty);
+        if (string.IsNullOrWhiteSpace(raw))
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        return new HashSet<string>(
+            raw.Split(';', StringSplitOptions.RemoveEmptyEntries)
+               .Select(s => s.Trim())
+               .Where(s => s.Length > 0),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Saves <paramref name="packages"/> as the whitelist preference.
+    /// </summary>
+    public static void SaveWhitelist(IEnumerable<string> packages)
+    {
+        var value = string.Join(";", packages
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+        if (string.IsNullOrEmpty(value))
+            Preferences.Remove(PrefCompatibilityModeWhitelist);
+        else
+            Preferences.Set(PrefCompatibilityModeWhitelist, value);
+    }
 
     private CancellationTokenSource? _cts;
     private string? _currentTrackKey; // "{title}|{artist}" of the last reported track
@@ -113,10 +154,27 @@ public sealed class MediaControllerNowPlayingService : IDisposable
             return;
         }
 
+        // Apply whitelist: if one is configured, only consider sessions from those packages.
+        var whitelist = GetWhitelist();
+        IList<MediaController> candidates = whitelist.Count > 0
+            ? controllers.Where(c => whitelist.Contains(c.PackageName ?? string.Empty)).ToList()
+            : controllers;
+
+        if (candidates.Count == 0)
+        {
+            // No whitelisted session active → treat as stopped.
+            if (_currentTrackKey is not null)
+            {
+                _currentTrackKey = null;
+                TrackChanged?.Invoke(this, null);
+            }
+            return;
+        }
+
         // Prefer a controller that is actively playing; otherwise take the first.
-        var controller = controllers
+        var controller = candidates
             .FirstOrDefault(c => c.PlaybackState?.State == PlaybackStateCode.Playing)
-            ?? controllers[0];
+            ?? candidates[0];
 
         var metadata = controller.Metadata;
         var playbackState = controller.PlaybackState;
