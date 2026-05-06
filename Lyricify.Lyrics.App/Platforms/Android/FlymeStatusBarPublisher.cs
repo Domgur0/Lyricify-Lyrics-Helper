@@ -19,7 +19,7 @@ namespace Lyricify.Lyrics.App.Platforms.Android;
 /// </remarks>
 internal sealed class FlymeStatusBarPublisher : IDisposable
 {
-    private const int FlymeShowTickerFlag = 0x1000000;  // FLAG_ALWAYS_SHOW_TICKER
+    private const int FlymeShowTickerFlag = 0x1000000; // FLAG_ALWAYS_SHOW_TICKER
     private const int FlymeUpdateTickerFlag = 0x2000000; // FLAG_ONLY_UPDATE_TICKER
     private const string FlymeTickerIconKey = "ticker_icon";
     private const string FlymeTickerIconSwitchKey = "ticker_icon_switch";
@@ -34,11 +34,11 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
     /// </summary>
     /// <param name="context">Android context used to obtain the notification service.</param>
     /// <param name="channelId">
-    ///   Notification channel ID.  Using the same channel as the app's primary media notification
+    ///   Notification channel ID. Using the same channel as the app's primary media notification
     ///   is recommended so the ticker does not create a separate, visible notification entry.
     /// </param>
     /// <param name="notificationId">
-    ///   Unique notification ID.  Re-using this ID on subsequent <see cref="Publish"/> calls
+    ///   Unique notification ID. Re-using this ID on subsequent <see cref="Publish"/> calls
     ///   updates the existing notification in-place.
     /// </param>
     public FlymeStatusBarPublisher(Context context, string channelId, int notificationId)
