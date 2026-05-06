@@ -1,4 +1,5 @@
 using Android.Content;
+using Android.Content.PM;
 using Android.Media;
 using Android.Media.Session;
 using System.Linq;
@@ -56,6 +57,56 @@ public sealed class MediaControllerNowPlayingService : IDisposable
             Preferences.Remove(PrefCompatibilityModeWhitelist);
         else
             Preferences.Set(PrefCompatibilityModeWhitelist, value);
+    }
+
+    /// <summary>
+    /// Returns all user-visible installed applications (apps that appear in the
+    /// launcher / app drawer), sorted alphabetically by display name.
+    /// Each entry is a <c>(PackageName, Label)</c> tuple.
+    /// </summary>
+    public static List<(string PackageName, string Label)> GetInstalledApps()
+    {
+        var context = global::Android.App.Application.Context;
+        var pm = context.PackageManager;
+        if (pm is null) return new List<(string, string)>();
+
+        var selfPackage = context.PackageName ?? string.Empty;
+
+        // Query every app that has a launcher icon (visible in the app drawer).
+        var launchIntent = new Intent(Intent.ActionMain);
+        launchIntent.AddCategory(Intent.CategoryLauncher);
+        var resolveInfos = pm.QueryIntentActivities(launchIntent, PackageInfoFlags.MetaData)
+                           ?? new List<ResolveInfo>();
+
+        return resolveInfos
+            .Where(r => r.ActivityInfo?.PackageName is not null
+                        && r.ActivityInfo.PackageName != selfPackage)
+            .Select(r => (
+                PackageName: r.ActivityInfo!.PackageName!,
+                Label: r.LoadLabel(pm)?.ToString() ?? r.ActivityInfo.PackageName!
+            ))
+            .DistinctBy(x => x.PackageName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns the display label for <paramref name="packageName"/>, or the package
+    /// name itself when the app is not found.
+    /// </summary>
+    public static string GetAppLabel(string packageName)
+    {
+        try
+        {
+            var pm = global::Android.App.Application.Context.PackageManager;
+            if (pm is null) return packageName;
+            var appInfo = pm.GetApplicationInfo(packageName, PackageInfoFlags.MetaData);
+            return appInfo?.LoadLabel(pm)?.ToString() ?? packageName;
+        }
+        catch
+        {
+            return packageName;
+        }
     }
 
     private CancellationTokenSource? _cts;

@@ -199,7 +199,7 @@ public partial class SettingsPage : ContentPage
     }
 
 #if ANDROID
-    // ── Compatibility mode whitelist ──────────────────────────────────────────
+    // ── Compatibility mode whitelist (Android-only helpers) ───────────────────
 
     private void RefreshWhitelistUI()
     {
@@ -207,6 +207,8 @@ public partial class SettingsPage : ContentPage
         var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
         foreach (var pkg in whitelist)
         {
+            var appLabel = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetAppLabel(pkg);
+
             var row = new Grid
             {
                 ColumnDefinitions =
@@ -217,14 +219,20 @@ public partial class SettingsPage : ContentPage
                 ColumnSpacing = 8,
             };
 
-            var label = new Label
+            var textStack = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
+            textStack.Children.Add(new Label
+            {
+                Text = appLabel,
+                TextColor = Color.FromArgb("#CCCCCC"),
+                FontSize = 13,
+            });
+            textStack.Children.Add(new Label
             {
                 Text = pkg,
-                TextColor = Color.FromArgb("#CCCCCC"),
-                FontSize = 12,
-                VerticalOptions = LayoutOptions.Center,
-            };
-            Grid.SetColumn(label, 0);
+                TextColor = Color.FromArgb("#888888"),
+                FontSize = 11,
+            });
+            Grid.SetColumn(textStack, 0);
 
             var removeButton = new Button
             {
@@ -232,7 +240,7 @@ public partial class SettingsPage : ContentPage
                 BackgroundColor = Color.FromArgb("#4A1A1A"),
                 TextColor = Colors.White,
                 CornerRadius = 6,
-                HeightRequest = 32,
+                HeightRequest = 36,
                 WidthRequest = 52,
                 FontSize = 12,
                 CommandParameter = pkg,
@@ -240,23 +248,10 @@ public partial class SettingsPage : ContentPage
             removeButton.Clicked += OnRemoveWhitelistEntryClicked;
             Grid.SetColumn(removeButton, 1);
 
-            row.Children.Add(label);
+            row.Children.Add(textStack);
             row.Children.Add(removeButton);
             WhitelistContainer.Children.Add(row);
         }
-    }
-
-    private void OnAddWhitelistEntryClicked(object sender, EventArgs e)
-    {
-        var pkg = WhitelistPackageEntry.Text?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(pkg)) return;
-
-        var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
-        whitelist.Add(pkg);
-        Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
-
-        WhitelistPackageEntry.Text = string.Empty;
-        RefreshWhitelistUI();
     }
 
     private void OnRemoveWhitelistEntryClicked(object? sender, EventArgs e)
@@ -270,6 +265,42 @@ public partial class SettingsPage : ContentPage
         RefreshWhitelistUI();
     }
 #endif
+
+    // Referenced from XAML – must compile on all platforms; body is Android-only.
+    private void OnAddWhitelistEntryClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        var pkg = WhitelistPackageEntry.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(pkg)) return;
+
+        var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
+        whitelist.Add(pkg);
+        Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
+
+        WhitelistPackageEntry.Text = string.Empty;
+        RefreshWhitelistUI();
+#endif
+    }
+
+    // Referenced from XAML – must compile on all platforms; body is Android-only.
+    private async void OnPickAppClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        var pickerPage = new AppPickerPage();
+        pickerPage.AppPicked += (_, pkg) =>
+        {
+            var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
+            if (whitelist.Add(pkg))
+            {
+                Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
+                MainThread.BeginInvokeOnMainThread(RefreshWhitelistUI);
+            }
+        };
+        await Navigation.PushModalAsync(pickerPage);
+#else
+        await Task.CompletedTask;
+#endif
+    }
 
     private void OnUnlockOverlayClicked(object sender, EventArgs e)
     {

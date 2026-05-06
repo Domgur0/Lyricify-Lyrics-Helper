@@ -370,6 +370,15 @@
                             Clicked="OnAddWhitelistEntryClicked" />
                     </Grid>
 
+                    <Button
+                        Text="从已安装应用中选择"
+                        BackgroundColor="#1A3A2A"
+                        TextColor="White"
+                        CornerRadius="8"
+                        HeightRequest="40"
+                        IsVisible="{OnPlatform Default=False, Android=True}"
+                        Clicked="OnPickAppClicked" />
+
                     <VerticalStackLayout
                         x:Name="WhitelistContainer"
                         Spacing="6" />

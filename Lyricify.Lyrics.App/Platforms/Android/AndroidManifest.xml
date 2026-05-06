@@ -18,6 +18,9 @@
     <!-- Post notifications (required on Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Enumerate all installed apps so the whitelist picker can show them -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/appicon"
