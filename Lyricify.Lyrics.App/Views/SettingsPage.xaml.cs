@@ -17,6 +17,7 @@ public partial class SettingsPage : ContentPage
     private const string PrefFlymeStatusBarEnabled = Lyricify.Lyrics.App.Platforms.Android.FlymeStatusBarService.PrefFlymeStatusBarEnabled;
     private const string PrefSuperLyricEnabled = Lyricify.Lyrics.App.Platforms.Android.SuperLyricService.PrefSuperLyricEnabled;
     private const string PrefCompatibilityModeEnabled = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.PrefCompatibilityModeEnabled;
+    private const string PrefCompatibilityModeWhitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.PrefCompatibilityModeWhitelist;
 #endif
 
     public SettingsPage()
@@ -197,6 +198,116 @@ public partial class SettingsPage : ContentPage
 #endif
     }
 
+#if ANDROID
+    // ── Compatibility mode whitelist (Android-only helpers) ───────────────────
+
+    private void RefreshWhitelistUI()
+    {
+        WhitelistContainer.Children.Clear();
+        var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
+        foreach (var pkg in whitelist)
+        {
+            var appLabel = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetAppLabel(pkg);
+
+            var row = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = GridLength.Star },
+                    new ColumnDefinition { Width = GridLength.Auto },
+                },
+                ColumnSpacing = 8,
+            };
+
+            var textStack = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
+            textStack.Children.Add(new Label
+            {
+                Text = appLabel,
+                TextColor = Color.FromArgb("#CCCCCC"),
+                FontSize = 13,
+            });
+            textStack.Children.Add(new Label
+            {
+                Text = pkg,
+                TextColor = Color.FromArgb("#888888"),
+                FontSize = 11,
+            });
+            Grid.SetColumn(textStack, 0);
+
+            var removeButton = new Button
+            {
+                Text = "删除",
+                BackgroundColor = Color.FromArgb("#4A1A1A"),
+                TextColor = Colors.White,
+                CornerRadius = 6,
+                HeightRequest = 36,
+                WidthRequest = 52,
+                FontSize = 12,
+                CommandParameter = pkg,
+            };
+            removeButton.Clicked += OnRemoveWhitelistEntryClicked;
+            Grid.SetColumn(removeButton, 1);
+
+            row.Children.Add(textStack);
+            row.Children.Add(removeButton);
+            WhitelistContainer.Children.Add(row);
+        }
+    }
+
+    private void OnRemoveWhitelistEntryClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button btn || btn.CommandParameter is not string pkg) return;
+
+        var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
+        whitelist.Remove(pkg);
+        Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
+
+        RefreshWhitelistUI();
+    }
+#endif
+
+    // Referenced from XAML – must compile on all platforms; body is Android-only.
+    private void OnAddWhitelistEntryClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        var pkg = WhitelistPackageEntry.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(pkg)) return;
+
+        var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
+        whitelist.Add(pkg);
+        Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
+
+        WhitelistPackageEntry.Text = string.Empty;
+        RefreshWhitelistUI();
+#endif
+    }
+
+    // Referenced from XAML – must compile on all platforms; body is Android-only.
+    private void OnPickAppClicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        _ = PushAppPickerAsync();
+#endif
+    }
+
+#if ANDROID
+    private async Task PushAppPickerAsync()
+    {
+        var pickerPage = new AppPickerPage();
+        pickerPage.AppPicked += (_, pkg) =>
+        {
+            var whitelist = Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.GetWhitelist();
+            if (whitelist.Add(pkg))
+            {
+                Lyricify.Lyrics.App.Platforms.Android.MediaControllerNowPlayingService.SaveWhitelist(whitelist);
+                // AppPicked is raised from the PopModalAsync continuation on the main thread.
+                RefreshWhitelistUI();
+            }
+        };
+        await Navigation.PushModalAsync(pickerPage);
+    }
+#endif
+
     private void OnUnlockOverlayClicked(object sender, EventArgs e)
     {
 #if ANDROID
@@ -260,6 +371,7 @@ public partial class SettingsPage : ContentPage
         FlymeStatusBarSwitch.IsToggled = Preferences.Get(PrefFlymeStatusBarEnabled, false);
         SuperLyricEnabledSwitch.IsToggled = Preferences.Get(PrefSuperLyricEnabled, false);
         CompatibilityModeSwitch.IsToggled = Preferences.Get(PrefCompatibilityModeEnabled, false);
+        RefreshWhitelistUI();
 #endif
         UpdateColorSwatchSelection(Preferences.Get(PrefOverlayLyricColor, LyricsOverlaySettings.DefaultLyricColorHex));
 

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Lyricify.Lyrics.App.Views.AppPickerPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:Lyricify.Lyrics.App.Views"
+    Title="选择应用"
+    BackgroundColor="{StaticResource PageBackground}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- ── Header ──────────────────────────────────────────────────────── -->
+        <Grid
+            Grid.Row="0"
+            ColumnDefinitions="*,Auto"
+            Padding="16,12"
+            BackgroundColor="#1A1A1A">
+            <Label
+                Grid.Column="0"
+                Text="从已安装应用中选择"
+                TextColor="White"
+                FontSize="16"
+                FontAttributes="Bold"
+                VerticalOptions="Center" />
+            <Button
+                Grid.Column="1"
+                Text="取消"
+                BackgroundColor="Transparent"
+                TextColor="{StaticResource ActiveLineColor}"
+                FontSize="15"
+                HeightRequest="40"
+                Padding="8,0"
+                Clicked="OnCancelClicked" />
+        </Grid>
+
+        <!-- ── Search ───────────────────────────────────────────────────────── -->
+        <SearchBar
+            Grid.Row="1"
+            x:Name="AppSearchBar"
+            Placeholder="搜索应用名称或包名…"
+            PlaceholderColor="#666666"
+            TextColor="White"
+            BackgroundColor="#242424"
+            TextChanged="OnSearchTextChanged" />
+
+        <!-- ── Loading indicator ─────────────────────────────────────────────── -->
+        <ActivityIndicator
+            Grid.Row="2"
+            x:Name="LoadingIndicator"
+            IsRunning="True"
+            IsVisible="True"
+            Color="{StaticResource ActiveLineColor}"
+            VerticalOptions="Center"
+            HorizontalOptions="Center" />
+
+        <!-- ── App list ──────────────────────────────────────────────────────── -->
+        <CollectionView
+            Grid.Row="2"
+            x:Name="AppsCollectionView"
+            IsVisible="False"
+            SelectionMode="Single"
+            SelectionChanged="OnAppSelectionChanged">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="local:InstalledAppInfo">
+                    <Grid Padding="16,10" BackgroundColor="Transparent">
+                        <VerticalStackLayout Spacing="2">
+                            <Label
+                                Text="{Binding Label}"
+                                TextColor="White"
+                                FontSize="14" />
+                            <Label
+                                Text="{Binding PackageName}"
+                                TextColor="#888888"
+                                FontSize="11" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>
