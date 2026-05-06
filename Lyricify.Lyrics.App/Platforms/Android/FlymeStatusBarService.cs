@@ -136,7 +136,7 @@ public class FlymeStatusBarService : Service
             case nameof(LyricsViewModel.IsTrackLoaded) when !_viewModel.IsTrackLoaded:
                 // Playback stopped — cancel any pending update and clear the ticker.
                 CancelAndDisposeCts(ref _trackChangeCts);
-                _flymePublisher?.Publish(null, null, ResolvePlaybackStatusIcon());
+                _flymePublisher?.Publish(null, null);
                 break;
         }
     }
@@ -188,14 +188,7 @@ public class FlymeStatusBarService : Service
     {
         var lyric = _viewModel?.CurrentLineText;
         var songTitle = _viewModel?.TrackTitle;
-        _flymePublisher?.Publish(lyric, songTitle, ResolvePlaybackStatusIcon());
-    }
-
-    private int ResolvePlaybackStatusIcon()
-    {
-        if (_viewModel?.IsPlaying == true)
-            return global::Android.Resource.Drawable.IcMediaPause;
-        return global::Android.Resource.Drawable.IcMediaPlay;
+        _flymePublisher?.Publish(lyric, songTitle);
     }
 
     // ── Notification helpers ──────────────────────────────────────────────────

@@ -21,8 +21,6 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
 {
     private const int FlymeShowTickerFlag = 0x1000000; // FLAG_ALWAYS_SHOW_TICKER
     private const int FlymeUpdateTickerFlag = 0x2000000; // FLAG_ONLY_UPDATE_TICKER
-    private const string FlymeTickerIconKey = "ticker_icon";
-    private const string FlymeTickerIconSwitchKey = "ticker_icon_switch";
 
     private readonly Context _context;
     private readonly string _channelId;
@@ -57,8 +55,7 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
     ///   Current song title shown in the notification content area (content title and content text).
     ///   Falls back to <paramref name="lyric"/> when <c>null</c> or empty.
     /// </param>
-    /// <param name="smallIconRes">Small icon resource ID shown before the ticker text.</param>
-    public void Publish(string? lyric, string? songTitle, int smallIconRes)
+    public void Publish(string? lyric, string? songTitle)
     {
         if (_disposed) return;
 
@@ -71,7 +68,7 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
             return;
         }
 
-        var notification = BuildTickerNotification(lyric, songTitle, smallIconRes);
+        var notification = BuildTickerNotification(lyric, songTitle);
         manager.Notify(_notificationId, notification);
     }
 
@@ -89,7 +86,7 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
     }
 
 #pragma warning disable CA1416 // Validate platform compatibility
-    private Notification BuildTickerNotification(string lyric, string? songTitle, int smallIconRes)
+    private Notification BuildTickerNotification(string lyric, string? songTitle)
     {
         // The content title and text are set to the song title so the notification
         // drawer entry remains meaningful; the ticker text carries the lyric line.
@@ -99,18 +96,13 @@ internal sealed class FlymeStatusBarPublisher : IDisposable
         var title = string.IsNullOrWhiteSpace(songTitle) ? lyric : songTitle;
 
         var notification = new Notification.Builder(_context, _channelId)
-            .SetSmallIcon(smallIconRes)
+            .SetSmallIcon(global::Android.Resource.Drawable.IcMediaPlay)
             .SetContentTitle(title)
             .SetContentText(title)
             .SetTicker(lyric)
             .SetShowWhen(false)
             .SetOngoing(true)
             .Build()!;
-
-        // ticker_icon: small icon resource shown before the lyric text in the status bar.
-        // ticker_icon_switch: when false the icon stays fixed; when true it animates.
-        notification.Extras?.PutInt(FlymeTickerIconKey, smallIconRes);
-        notification.Extras?.PutBoolean(FlymeTickerIconSwitchKey, false);
 
         notification.Flags = (NotificationFlags)(
             (int)notification.Flags |
